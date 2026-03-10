@@ -1,0 +1,23 @@
+﻿Authenticating Demo Corp natively...
+node.exe : FAILED 
+dynamically: 
+At line:1 char:1
++ & "C:\Program Files
+\nodejs/node.exe" 
+"C:\Program 
+Files\nodejs/node_mo 
+...
++ ~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~
+    + CategoryInfo   
+           : NotSpe  
+  cified: (FAILED    
+ dynamically: :St    
+ring) [], Remote    
+Exception
+    + FullyQualified 
+   ErrorId : Native  
+  CommandError
+ 

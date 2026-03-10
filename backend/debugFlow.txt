@@ -1,0 +1,40 @@
+1. Logging in...
+2. Fetching dashboard for tenant 73bcc788-a5ff-43ee-b522-3bd7a305cf6b...
+Dashboard Status: 500
+Dashboard Error Payload: {
+  error: '\n' +
+    'Invalid `prisma.controlResult.findMany()` invocation in\n' +
+    'C:\\Users\\Aamir Sohail\\Desktop\\VARIX 2.0\\backend\\src\\services\\dashboard.service.ts:13:58\n' +
+    '\n' +
+    '  10 const financialIntegrityScore = 100 - (riskScore?.overallRisk || 0);\n' +
+    '  11 \n' +
+    '  12 // 2. Control Violations (Recent FAILED results)\n' +
+    '→ 13 const controlViolations = await prisma.controlResult.findMany({\n' +
+    '       where: {\n' +
+    '         tenantId: "73bcc788-a5ff-43ee-b522-3bd7a305cf6b",\n' +
+    '         ~~~~~~~~\n' +
+    '         status: "FAILED",\n' +
+    '     ?   AND?: ControlResultWhereInput | ControlResultWhereInput[],\n' +
+    '     ?   OR?: ControlResultWhereInput[],\n' +
+    '     ?   NOT?: ControlResultWhereInput | ControlResultWhereInput[],\n' +
+    '     ?   id?: StringFilter | String,\n' +
+    '     ?   controlRunId?: StringFilter | String,\n' +
+    '     ?   controlSpecId?: StringFilter | String,\n' +
+    '     ?   entityId?: StringFilter | String,\n' +
+    '     ?   details?: JsonNullableFilter,\n' +
+    '     ?   createdAt?: DateTimeFilter | DateTime,\n' +
+    '     ?   controlRun?: ControlRunRelationFilter | ControlRunWhereInput,\n' +
+    '     ?   controlSpec?: ControlSpecRelationFilter | ControlSpecWhereInput,\n' +
+    '     ?   overrides?: ControlOverrideListRelationFilter\n' +
+    '       },\n' +
+    '       orderBy: {\n' +
+    '         executedAt: "desc"\n' +
+    '       },\n' +
+    '       take: 5,\n' +
+    '       include: {\n' +
+    '         spec: true\n' +
+    '       }\n' +
+    '     })\n' +
+    '\n' +
+    'Unknown argument `tenantId`. Available options are marked with ?.'
+}

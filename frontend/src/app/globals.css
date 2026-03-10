@@ -1,0 +1,88 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --color-sidebar: var(--sidebar-bg);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-foreground: var(--sidebar-fg);
+  --color-card: var(--card-bg);
+  --color-card-border: var(--card-border);
+  --color-primary-brand: var(--primary-brand);
+  --color-status-success: var(--success);
+  --color-status-warning: var(--warning);
+  --color-status-error: var(--error);
+  --color-status-info: var(--info);
+}
+
+:root {
+  /* Enterprise Foundation */
+  --background: #f8fafc; /* Slate 50 */
+  --foreground: #0f172a; /* Slate 900 */
+  
+  /* Sidebar */
+  --sidebar-bg: #ffffff;
+  --sidebar-fg: #64748b; /* Slate 500 */
+  --sidebar-border: #e2e8f0; /* Slate 200 */
+  --sidebar-width-expanded: 240px;
+  --sidebar-width-collapsed: 72px;
+
+  /* Header */
+  --header-height: 64px;
+  --header-bg: #ffffff;
+  --header-border: #e2e8f0;
+
+  /* Cards & Surface */
+  --card-bg: #ffffff;
+  --card-border: #e2e8f0;
+  --radius: 8px;
+
+  /* Semantic / Branding */
+  --primary-brand: #2563eb; /* Blue 600 */
+  --success: #10b981; /* Emerald 500 */
+  --warning: #f59e0b; /* Amber 500 */
+  --error: #ef4444; /* Red 500 */
+  --info: #3b82f6; /* Blue 500 */
+
+  --font-geist-sans: "Inter", sans-serif;
+}
+
+.dark {
+  --background: #020617;
+  --foreground: #f8fafc;
+  --sidebar-bg: #0f172a;
+  --sidebar-fg: #94a3b8;
+  --sidebar-border: #1e293b;
+  --header-bg: #0f172a;
+  --header-border: #1e293b;
+  --card-bg: #1e293b;
+  --card-border: #334155;
+}
+
+@layer base {
+  * {
+    @apply border-sidebar-border;
+  }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+}
+
+/* Utilities */
+.glass {
+  @apply bg-white/70 backdrop-blur-md border border-white/20;
+}
+
+.card-shadow {
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+}
+
+.panel-transition {
+  @apply transition-all duration-300 ease-in-out;
+}

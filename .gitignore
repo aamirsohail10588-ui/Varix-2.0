@@ -1,0 +1,9 @@
+node_modules
+.next
+dist
+uploads
+.env
+backend/node_modules
+frontend/node_modules
+varix.csv
+varix_enterprise_dataset.csv

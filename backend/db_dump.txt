@@ -1,0 +1,4 @@
+--- ROLES ---
+USER_ID: 75e3b0dd-a203-4f35-9408-865ba3263a04 | EMAIL: admin@varix.com | TENANT_ID: 0bc5af0e-bbf0-4725-bb14-f8b3f7882f1c | TENANT: Demo Corp
+USER_ID: 146019de-a191-4ecc-b00e-157f6be818d4 | EMAIL: test@example.com | TENANT_ID: 006a7132-a36b-4c22-bb1e-b8e2eab26e6f | TENANT: Test Company
+USER_ID: 93efe1b2-dc97-4996-8afc-42c8a57f4a6e | EMAIL: aamirsohail10588@gmail.com | TENANT_ID: 9f1e8fba-1cb2-47d3-9b97-0beb24c79e4d | TENANT: no company

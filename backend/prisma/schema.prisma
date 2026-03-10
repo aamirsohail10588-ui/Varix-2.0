@@ -1,0 +1,898 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Tenant {
+  id                        String                     @id @default(uuid())
+  name                      String
+  industry                  String?                    @default("Technology")
+  company_size              String?                    @default("Mid-Market")
+  createdAt                 DateTime                   @default(now())
+  updatedAt                 DateTime                   @updatedAt
+  accounts                  Account[]
+  auditLogs                 AuditLog[]
+  branches                  Branch[]
+  closeCycles               CloseCycle[]
+  closeTasks                CloseTask[]
+  controlOverrides          ControlOverride[]
+  controlSpecs              ControlSpec[]
+  costCenters               CostCenter[]
+  customers                 Customer[]
+  dataQualityIssues         DataQualityIssue[]
+  roles                     Role[]
+  taxComponents             TaxComponent[]
+  users                     UserTenantRole[]
+  vendors                   Vendor[]
+  apiKeys                   ApiKey[]
+  budgets                   Budget[]
+  changeEvents              ChangeEvent[]
+  controlRuns               ControlRun[]
+  eliminationJournals       EliminationJournal[]
+  entities                  Entity[]
+  erpConnectors             ErpConnector[]
+  evidenceDocuments         EvidenceDocument[]
+  healthIndices             FinancialHealthIndex[]
+  forecastVersions          ForecastVersion[]
+  graphEdges                GraphEdge[]
+  graphNodes                GraphNode[]
+  gstRecords                GstRecord[]
+  gstValidations            GstValidation[]
+  ingestionBatches          IngestionBatch[]
+  intercompanyTransactions  IntercompanyTransaction[]
+  ledgerEntries             LedgerEntry[]
+  materializedLedgerMetrics MaterializedLedgerMetric[]
+  riskMetrics               RiskMetric[]
+  serviceAccounts           ServiceAccount[]
+  sessions                  Session[]
+  snapshots                 Snapshot[]
+  syncJobs                  SyncJob[]
+  varianceRecords           VarianceRecord[]
+  vendorCompliance          VendorCompliance[]
+  bankAccounts              BankAccount[]
+  bankStatements            BankStatement[]
+  reconciliationMatches     ReconciliationMatch[]
+}
+
+model User {
+  id                String             @id @default(uuid())
+  email             String             @unique
+  password          String
+  name              String?
+  mfaEnabled        Boolean            @default(false)
+  mfaSecret         String?
+  googleId          String?            @unique
+  microsoftId       String?            @unique
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  auditLogs         AuditLog[]
+  controlOverrides  ControlOverride[]
+  taskApprovals     TaskApproval[]
+  taskEvidence      TaskEvidence[]
+  tenants           UserTenantRole[]
+  evidenceDocuments EvidenceDocument[]
+  ingestionBatches  IngestionBatch[]
+  sessions          Session[]
+}
+
+model Role {
+  id          String           @id @default(uuid())
+  name        String
+  description String?
+  tenantId    String
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  tenant      Tenant           @relation(fields: [tenantId], references: [id])
+  permissions RolePermission[]
+  users       UserTenantRole[]
+
+  @@unique([name, tenantId])
+}
+
+model Permission {
+  id          String           @id @default(uuid())
+  name        String           @unique
+  description String?
+  roles       RolePermission[]
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+}
+
+model UserTenantRole {
+  id        String   @id @default(uuid())
+  userId    String
+  tenantId  String
+  roleId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  role      Role     @relation(fields: [roleId], references: [id])
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@unique([userId, tenantId, roleId])
+}
+
+model Session {
+  id           String   @id @default(uuid())
+  userId       String
+  tenantId     String?
+  token        String   @unique
+  refreshToken String?  @unique
+  ipAddress    String?
+  userAgent    String?
+  deviceMeta   Json?
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+  tenant       Tenant?  @relation(fields: [tenantId], references: [id])
+  user         User     @relation(fields: [userId], references: [id])
+
+  @@map("sessions")
+}
+
+model ApiKey {
+  id        String    @id @default(uuid())
+  tenantId  String
+  name      String
+  keyHash   String    @unique
+  prefix    String
+  scopes    String[]  @default(["read"])
+  expiresAt DateTime?
+  lastUsed  DateTime?
+  createdAt DateTime  @default(now())
+  tenant    Tenant    @relation(fields: [tenantId], references: [id])
+
+  @@map("api_keys")
+}
+
+model ServiceAccount {
+  id         String   @id @default(uuid())
+  tenantId   String
+  name       String
+  clientId   String   @unique
+  secretHash String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  tenant     Tenant   @relation(fields: [tenantId], references: [id])
+
+  @@map("service_accounts")
+}
+
+model Account {
+  id        String        @id @default(uuid())
+  tenantId  String
+  code      String
+  name      String
+  type      String
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  tenant    Tenant        @relation(fields: [tenantId], references: [id])
+  entries   LedgerEntry[]
+
+  @@unique([tenantId, code])
+}
+
+model LedgerEntry {
+  id                 String   @id @default(uuid())
+  tenant_id          String
+  transaction_date   DateTime
+  posting_period     String   @default("OPEN")
+  account_id         String
+  debit_amount       Decimal  @default(0.0) @db.Decimal(19, 4)
+  credit_amount      Decimal  @default(0.0) @db.Decimal(19, 4)
+  currency           String   @default("USD")
+  source_system      String?
+  snapshot_id        String?
+  createdAt          DateTime @default(now())
+  confidence_score   Int      @default(100)
+  ingestion_batch_id String?
+  raw_record_id      String?
+  source_id          String?
+  account            Account  @relation(fields: [account_id], references: [id])
+  tenant             Tenant   @relation(fields: [tenant_id], references: [id])
+  snapshot           Snapshot? @relation(fields: [snapshot_id], references: [id])
+  reconciliationMatches ReconciliationMatch[]
+
+  @@index([tenant_id])
+  @@index([tenant_id, transaction_date])
+  @@index([tenant_id, posting_period])
+  @@index([account_id])
+  @@index([snapshot_id])
+  @@index([ingestion_batch_id])
+  @@map("ledger_entries")
+}
+
+model Vendor {
+  id        String   @id @default(uuid())
+  tenantId  String
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+}
+
+model Customer {
+  id        String   @id @default(uuid())
+  tenantId  String
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+}
+
+model CostCenter {
+  id        String   @id @default(uuid())
+  tenantId  String
+  code      String
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, code])
+}
+
+model Branch {
+  id        String   @id @default(uuid())
+  tenantId  String
+  code      String
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, code])
+}
+
+model TaxComponent {
+  id        String   @id @default(uuid())
+  tenantId  String
+  code      String
+  rate      Decimal  @db.Decimal(5, 4)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, code])
+}
+
+model FxRate {
+  id             String   @id @default(uuid())
+  baseCurrency   String
+  targetCurrency String
+  rate           Decimal  @db.Decimal(19, 6)
+  date           DateTime
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([baseCurrency, targetCurrency, date])
+}
+
+model IngestionBatch {
+  id                String             @id @default(uuid())
+  tenant_id         String
+  source_type       String
+  file_name         String
+  record_count      Int                @default(0)
+  status            String             @default("pending")
+  createdBy         String?
+  created_at        DateTime           @default(now())
+  dataQualityIssues DataQualityIssue[]
+  user              User?              @relation(fields: [createdBy], references: [id])
+  tenant            Tenant             @relation(fields: [tenant_id], references: [id])
+  files             IngestionFile[]
+  rawRecords        RawRecord[]
+  snapshots         Snapshot[]
+
+  @@index([tenant_id])
+  @@index([status])
+  @@index([created_at])
+
+  @@map("ingestion_batches")
+}
+
+model IngestionFile {
+  id        String         @id @default(uuid())
+  batch_id  String
+  file_path String
+  checksum  String
+  batch     IngestionBatch @relation(fields: [batch_id], references: [id], onDelete: Cascade)
+
+  @@map("ingestion_files")
+}
+
+model Snapshot {
+  id                 String             @id @default(uuid())
+  tenant_id          String
+  batch_id           String
+  status             String             @default("UNPROCESSED")
+  snapshot_timestamp DateTime           @default(now())
+  record_count       Int                @default(0)
+  payload_hash       String             @default("")
+  dataQualityIssues  DataQualityIssue[]
+  changeEvents       ChangeEvent[]
+  controlRuns        ControlRun[]
+  rawRecords         RawRecord[]
+  batch              IngestionBatch     @relation(fields: [batch_id], references: [id])
+ tenant             Tenant             @relation(fields: [tenant_id], references: [id])
+
+ledgerEntries      LedgerEntry[]
+
+@@map("snapshots")
+}
+
+model RawRecord {
+  id               String         @id @default(uuid())
+  batch_id         String
+  payload_json     Json
+  snapshotId       String?
+  validationErrors Json?
+  batch            IngestionBatch @relation(fields: [batch_id], references: [id], onDelete: Cascade)
+  snapshot         Snapshot?      @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
+
+  @@index([batch_id])
+  @@index([snapshotId])
+
+  @@map("raw_records")
+}
+
+model ChangeEvent {
+  id            String   @id @default(uuid())
+  tenant_id     String
+  entity_type   String   @default("RECORD")
+  entity_id     String
+  change_type   String
+  old_value     Json?
+  new_value     Json?
+  snapshot_from String?
+  snapshot_to   String
+  detected_at   DateTime @default(now())
+  snapshotTo    Snapshot @relation(fields: [snapshot_to], references: [id])
+  tenant        Tenant   @relation(fields: [tenant_id], references: [id])
+
+  @@map("change_events")
+}
+
+model DataQualityIssue {
+  id              String         @id @default(uuid())
+  tenantId        String
+  batchId         String
+  snapshotId      String
+  issueType       String
+  entityReference String?
+  severity        String
+  status          String         @default("OPEN")
+  details         Json?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  batch           IngestionBatch @relation(fields: [batchId], references: [id])
+  snapshot        Snapshot       @relation(fields: [snapshotId], references: [id])
+  tenant          Tenant         @relation(fields: [tenantId], references: [id])
+}
+
+model ControlSpec {
+  id          String          @id @default(uuid())
+  tenantId    String
+  name        String
+  description String?
+  ruleType    String
+  parameters  Json
+  severity    String
+  isActive    Boolean         @default(true)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  tenant      Tenant          @relation(fields: [tenantId], references: [id])
+  results     ControlResult[]
+}
+
+model ControlRun {
+  id            String          @id @default(uuid())
+  tenantId      String
+  snapshot_id   String
+  status        String          @default("RUNNING")
+  run_timestamp DateTime        @default(now())
+  results       ControlResult[]
+  snapshot      Snapshot        @relation(fields: [snapshot_id], references: [id])
+  tenant        Tenant          @relation(fields: [tenantId], references: [id])
+
+  @@map("control_runs")
+}
+
+model ControlResult {
+  id                String           @id @default(uuid())
+  controlRunId      String
+  control_id        String
+  entity_reference  String
+  severity          String
+  violation_message String
+  confidence_score  String?
+  created_at        DateTime         @default(now())
+  overrides         ControlOverride?
+  controlRun        ControlRun       @relation(fields: [controlRunId], references: [id])
+  controlSpec       ControlSpec      @relation(fields: [control_id], references: [id])
+
+  @@index([controlRunId])
+  @@index([control_id])
+  @@index([entity_reference])
+
+  @@map("control_results")
+}
+
+model ControlOverride {
+  id           String        @id @default(uuid())
+  tenantId     String
+  resultId     String        @unique
+  approvedById String
+  reason       String
+  createdAt    DateTime      @default(now())
+  approvedBy   User          @relation(fields: [approvedById], references: [id])
+  result       ControlResult @relation(fields: [resultId], references: [id])
+  tenant       Tenant        @relation(fields: [tenantId], references: [id])
+}
+
+model CloseCycle {
+  id             String      @id @default(uuid())
+  tenantId       String
+  name           String
+  startDate      DateTime
+  endDate        DateTime
+  close_deadline DateTime?
+  status         String      @default("OPEN")
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  tenant         Tenant      @relation(fields: [tenantId], references: [id])
+  tasks          CloseTask[]
+}
+
+model CloseTask {
+  id                        String           @id @default(uuid())
+  tenantId                  String
+  cycleId                   String
+  name                      String
+  description               String?
+  assignedRoleId            String?
+  status                    String           @default("PENDING")
+  createdAt                 DateTime         @default(now())
+  updatedAt                 DateTime         @updatedAt
+  cycle                     CloseCycle       @relation(fields: [cycleId], references: [id])
+  tenant                    Tenant           @relation(fields: [tenantId], references: [id])
+  approvals                 TaskApproval[]
+  dependenciesAsPredecessor TaskDependency[] @relation("PredecessorTask")
+  dependenciesAsSuccessor   TaskDependency[] @relation("SuccessorTask")
+  evidence                  TaskEvidence[]
+}
+
+model TaskDependency {
+  id            String    @id @default(uuid())
+  predecessorId String
+  successorId   String
+  createdAt     DateTime  @default(now())
+  predecessor   CloseTask @relation("PredecessorTask", fields: [predecessorId], references: [id])
+  successor     CloseTask @relation("SuccessorTask", fields: [successorId], references: [id])
+
+  @@unique([predecessorId, successorId])
+}
+
+model TaskEvidence {
+  id           String    @id @default(uuid())
+  taskId       String
+  uploadedById String
+  fileName     String
+  fileUrl      String
+  createdAt    DateTime  @default(now())
+  task         CloseTask @relation(fields: [taskId], references: [id])
+  uploadedBy   User      @relation(fields: [uploadedById], references: [id])
+}
+
+model TaskApproval {
+  id           String    @id @default(uuid())
+  taskId       String
+  approvedById String
+  status       String
+  comments     String?
+  createdAt    DateTime  @default(now())
+  approvedBy   User      @relation(fields: [approvedById], references: [id])
+  task         CloseTask @relation(fields: [taskId], references: [id])
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  tenantId   String?
+  userId     String?
+  action     String
+  entityType String?
+  entityId   String?
+  details    Json?
+  hash       String?
+  prevHash   String?
+  createdAt  DateTime @default(now())
+  tenant     Tenant?  @relation(fields: [tenantId], references: [id])
+  user       User?    @relation(fields: [userId], references: [id])
+
+  @@index([tenantId])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model RiskMetric {
+  id            String   @id @default(uuid())
+  tenant_id     String
+  period        String
+  journal_risk  Float    @default(0.0)
+  tax_risk      Float    @default(0.0)
+  override_risk Float    @default(0.0)
+  close_risk    Float    @default(0.0)
+  calculated_at DateTime @default(now())
+  tenant        Tenant   @relation(fields: [tenant_id], references: [id])
+
+  @@unique([tenant_id, period])
+  @@map("risk_metrics")
+}
+
+model GraphNode {
+  id               String      @id @default(uuid())
+  tenant_id        String
+  node_type        String
+  reference_id     String
+  state_value      Json?
+  last_computed_at DateTime?
+  version          Int         @default(1)
+  created_at       DateTime    @default(now())
+  edges_out        GraphEdge[] @relation("sourceNode")
+  edges_in         GraphEdge[] @relation("targetNode")
+  tenant           Tenant      @relation(fields: [tenant_id], references: [id])
+
+  @@unique([tenant_id, node_type, reference_id])
+  @@index([tenant_id])
+  @@index([reference_id])
+  @@map("graph_nodes")
+}
+
+model GraphEdge {
+  id                String    @id @default(uuid())
+  tenant_id         String
+  source_node_id    String
+  target_node_id    String
+  relationship_type String
+  created_at        DateTime  @default(now())
+  sourceNode        GraphNode @relation("sourceNode", fields: [source_node_id], references: [id])
+  targetNode        GraphNode @relation("targetNode", fields: [target_node_id], references: [id])
+  tenant            Tenant    @relation(fields: [tenant_id], references: [id])
+
+  @@unique([source_node_id, target_node_id, relationship_type])
+
+  @@index([tenant_id])
+  @@index([source_node_id])
+  @@index([target_node_id])
+
+  @@map("graph_edges")
+}
+
+model ErpConnector {
+  id                String           @id @default(uuid())
+  tenant_id         String
+  connector_type    String
+  connection_config Json
+  sync_frequency    String           @default("DAILY")
+  last_sync_at      DateTime?
+  status            String           @default("ACTIVE")
+  created_at        DateTime         @default(now())
+  updated_at        DateTime         @updatedAt
+  tokens            ConnectorToken[]
+  tenant            Tenant           @relation(fields: [tenant_id], references: [id])
+  syncJobs          SyncJob[]
+
+  @@unique([tenant_id, connector_type])
+  @@map("erp_connectors")
+}
+
+model ConnectorToken {
+  id           String       @id @default(uuid())
+  connector_id String
+  accessToken  String
+  refreshToken String?
+  expiresAt    DateTime?
+  createdAt    DateTime     @default(now())
+  connector    ErpConnector @relation(fields: [connector_id], references: [id], onDelete: Cascade)
+
+  @@map("connector_tokens")
+}
+
+model SyncJob {
+  id            String       @id @default(uuid())
+  tenant_id     String
+  connector_id  String
+  sync_type     String
+  status        String       @default("PENDING")
+  started_at    DateTime?
+  completed_at  DateTime?
+  error_message String?
+  record_count  Int          @default(0)
+  connector     ErpConnector @relation(fields: [connector_id], references: [id])
+  tenant        Tenant       @relation(fields: [tenant_id], references: [id])
+  logs          SyncLog[]
+
+  @@map("sync_jobs")
+}
+
+model SyncLog {
+  id        String   @id @default(uuid())
+  job_id    String
+  level     String
+  message   String
+  timestamp DateTime @default(now())
+  syncJob   SyncJob  @relation(fields: [job_id], references: [id], onDelete: Cascade)
+
+  @@map("sync_logs")
+}
+
+model Entity {
+  id        String            @id @default(uuid())
+  tenantId  String
+  name      String
+  country   String
+  currency  String
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+  tenant    Tenant            @relation(fields: [tenantId], references: [id])
+  childOf   EntityHierarchy[] @relation("ChildEntity")
+  parentOf  EntityHierarchy[] @relation("ParentEntity")
+
+  @@map("entities")
+}
+
+model EntityHierarchy {
+  id           String  @id @default(uuid())
+  parentId     String
+  childId      String
+  ownershipPct Decimal @db.Decimal(5, 4)
+  child        Entity  @relation("ChildEntity", fields: [childId], references: [id])
+  parent       Entity  @relation("ParentEntity", fields: [parentId], references: [id])
+
+  @@unique([parentId, childId])
+  @@map("entity_hierarchy")
+}
+
+model IntercompanyTransaction {
+  id              String   @id @default(uuid())
+  tenantId        String
+  fromEntityId    String
+  toEntityId      String
+  amount          Decimal  @db.Decimal(19, 4)
+  currency        String
+  transactionDate DateTime
+  description     String?
+  tenant          Tenant   @relation(fields: [tenantId], references: [id])
+
+  @@map("intercompany_transactions")
+}
+
+model EliminationJournal {
+  id              String   @id @default(uuid())
+  tenantId        String
+  consolidationId String
+  description     String
+  amount          Decimal  @db.Decimal(19, 4)
+  createdAt       DateTime @default(now())
+  tenant          Tenant   @relation(fields: [tenantId], references: [id])
+
+  @@map("elimination_journals")
+}
+
+model GstRecord {
+  id              String   @id @default(uuid())
+  tenantId        String
+  gstin           String
+  invoiceNum      String
+  invoiceDate     DateTime
+  hsnCode         String?
+  taxableValue    Decimal  @db.Decimal(19, 4)
+  igstAmount      Decimal  @default(0) @db.Decimal(19, 4)
+  cgstAmount      Decimal  @default(0) @db.Decimal(19, 4)
+  sgstAmount      Decimal  @default(0) @db.Decimal(19, 4)
+  isReverseCharge Boolean  @default(false)
+  tenant          Tenant   @relation(fields: [tenantId], references: [id])
+
+  @@map("gst_records")
+}
+
+model GstValidation {
+  id           String   @id @default(uuid())
+  tenantId     String
+  entityType   String
+  entityId     String
+  status       String
+  issueDetails Json?
+  createdAt    DateTime @default(now())
+  tenant       Tenant   @relation(fields: [tenantId], references: [id])
+
+  @@map("gst_validations")
+}
+
+model VendorCompliance {
+  id              String   @id @default(uuid())
+  tenantId        String
+  vendorName      String
+  gstin           String
+  filingStatus    String
+  complianceScore Float    @default(0)
+  lastChecked     DateTime @default(now())
+  tenant          Tenant   @relation(fields: [tenantId], references: [id])
+
+  @@map("vendor_compliance")
+}
+
+model Budget {
+  id        String   @id @default(uuid())
+  tenantId  String
+  name      String
+  version   String
+  period    String
+  amount    Decimal  @db.Decimal(19, 4)
+  status    String   @default("DRAFT")
+  createdAt DateTime @default(now())
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+
+  @@map("budgets")
+}
+
+model ForecastVersion {
+  id        String   @id @default(uuid())
+  tenantId  String
+  budgetId  String
+  name      String
+  amount    Decimal  @db.Decimal(19, 4)
+  createdAt DateTime @default(now())
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+
+  @@map("forecast_versions")
+}
+
+model VarianceRecord {
+  id          String   @id @default(uuid())
+  tenantId    String
+  period      String
+  actual      Decimal  @db.Decimal(19, 4)
+  budget      Decimal  @db.Decimal(19, 4)
+  variance    Decimal  @db.Decimal(19, 4)
+  explanation String?
+  createdAt   DateTime @default(now())
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+
+  @@map("variance_records")
+}
+
+model FinancialHealthIndex {
+  id                    String   @id @default(uuid())
+  tenant_id             String
+  period                String
+  integrity_component   Float    @default(0.0)
+  close_component       Float    @default(0.0)
+  control_component     Float    @default(0.0)
+  change_risk_component Float    @default(0.0)
+  fraud_component       Float    @default(0.0)
+  evidence_component    Float    @default(0.0)
+  final_score           Float    @default(0.0)
+  calculated_at         DateTime @default(now())
+  tenant                Tenant   @relation(fields: [tenant_id], references: [id])
+
+  @@unique([tenant_id, period])
+  @@map("financial_health_index")
+}
+
+model MaterializedLedgerMetric {
+  id            String   @id @default(uuid())
+  tenant_id     String
+  metric_date   DateTime
+  debit_total   Decimal  @db.Decimal(19, 4)
+  credit_total  Decimal  @db.Decimal(19, 4)
+  record_count  Int
+  calculated_at DateTime @default(now())
+  tenant        Tenant   @relation(fields: [tenant_id], references: [id])
+
+  @@unique([tenant_id, metric_date])
+  @@map("materialized_ledger_metrics")
+}
+
+model BankAccount {
+  id         String   @id @default(uuid())
+  tenantId   String
+  bankName   String
+  accountNo  String
+  currency   String
+  createdAt  DateTime @default(now())
+
+  tenant     Tenant   @relation(fields: [tenantId], references: [id])
+  statements BankStatement[]
+
+  @@index([tenantId])
+}
+
+model BankStatement {
+  id            String   @id @default(uuid())
+  tenantId      String
+  bankAccountId String
+  statementDate DateTime
+  createdAt     DateTime @default(now())
+
+  tenant        Tenant      @relation(fields: [tenantId], references: [id])
+  bankAccount   BankAccount @relation(fields: [bankAccountId], references: [id])
+  transactions  BankTransaction[]
+
+  @@index([tenantId])
+  @@index([statementDate])
+}
+
+model BankTransaction {
+  id              String   @id @default(uuid())
+  statementId     String
+  transactionDate DateTime
+  description     String
+  amount          Decimal  @db.Decimal(19,4)
+  currency        String
+  reference       String?
+  createdAt       DateTime @default(now())
+
+  statement       BankStatement @relation(fields: [statementId], references: [id])
+  matches         ReconciliationMatch[]
+
+  @@index([transactionDate])
+}
+
+model ReconciliationMatch {
+  id                String   @id @default(uuid())
+  tenantId          String
+  bankTransactionId String
+  ledgerEntryId     String
+  matchType         String
+  confidence        Float
+  createdAt         DateTime @default(now())
+
+  tenant            Tenant         @relation(fields: [tenantId], references: [id])
+  bankTransaction   BankTransaction @relation(fields: [bankTransactionId], references: [id])
+  ledgerEntry       LedgerEntry     @relation(fields: [ledgerEntryId], references: [id])
+
+  @@index([tenantId])
+}
+
+model NetworkMetric {
+  id            String   @id @default(uuid())
+  industry      String
+  company_size  String
+  metric_name   String
+  average_value Float
+  percentile_25 Float
+  percentile_50 Float
+  percentile_75 Float
+  percentile_95 Float
+  calculated_at DateTime @default(now())
+
+  @@unique([industry, company_size, metric_name, calculated_at])
+  @@map("network_metrics")
+}
+
+model EvidenceDocument {
+  id            String   @id @default(uuid())
+  tenant_id     String
+  entity_type   String
+  entity_id     String
+  file_name     String
+  file_path     String
+  uploaded_by   String
+  uploaded_at   DateTime @default(now())
+  document_type String
+  tenant        Tenant   @relation(fields: [tenant_id], references: [id])
+  user          User     @relation(fields: [uploaded_by], references: [id])
+
+  @@map("evidence_documents")
+}

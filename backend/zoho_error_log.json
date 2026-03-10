@@ -1,0 +1,8 @@
+{
+  "message": "Request failed with status code 401",
+  "response_data": {
+    "code": 57,
+    "message": "You are not authorized to perform this operation"
+  },
+  "status": 401
+}

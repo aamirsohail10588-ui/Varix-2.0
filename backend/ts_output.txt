@@ -1,0 +1,5 @@
+src/services/changes.service.ts(30,58): error TS2339: Property 'transaction_date' does not exist on type 'string | number | boolean | JsonObject | JsonArray'.
+  Property 'transaction_date' does not exist on type 'string'.
+src/services/changes.service.ts(30,97): error TS2339: Property 'Date' does not exist on type 'string | number | boolean | JsonObject | JsonArray'.
+  Property 'Date' does not exist on type 'string'.
+src/services/risk.service.ts(58,25): error TS2339: Property 'riskScore' does not exist on type 'PrismaClient<PrismaClientOptions, never, DefaultArgs>'.
