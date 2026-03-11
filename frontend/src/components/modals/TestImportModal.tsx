@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { X, Upload, CheckCircle, AlertCircle, Loader2, FileText } from "lucide-react";
-import api from "@/lib/api";
+import apiClient from "@/services/apiClient";
 
 interface TestImportModalProps {
     isOpen: boolean;
@@ -41,7 +41,7 @@ export default function TestImportModal({ isOpen, onClose, onSuccess }: TestImpo
         formData.append("period", period);
 
         try {
-            const res = await api.post("/ingestion/import-test", formData, {
+            const res = await apiClient.post("/ingestion/import-test", formData, {
                 headers: { "Content-Type": "multipart/form-data" }
             });
 

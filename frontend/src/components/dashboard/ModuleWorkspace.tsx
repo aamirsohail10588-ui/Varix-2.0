@@ -7,7 +7,7 @@ import FilterBar from "./FilterBar";
 import OperationalTable from "./OperationalTable";
 import ContextPanel from "./ContextPanel";
 import { Button } from "@/components/ui/button";
-import api from "@/lib/api";
+import apiClient from "@/services/apiClient";
 import { Loader2 } from "lucide-react";
 
 interface Metric {
@@ -60,7 +60,7 @@ export default function ModuleWorkspace({
             };
 
             const endpoint = endpointMap[title] || "/ledger/export";
-            const response = await api.get(`${endpoint}?format=${format}`, {
+            const response = await apiClient.get(`${endpoint}?format=${format}`, {
                 responseType: "blob"
             });
 
@@ -82,7 +82,7 @@ export default function ModuleWorkspace({
     const handleGenerateReport = async () => {
         setIsGeneratingReport(true);
         try {
-            const response = await api.post("/reports/generate", { format: "PDF" }, {
+            const response = await apiClient.post("/reports/generate", { format: "PDF" }, {
                 responseType: "blob"
             });
 

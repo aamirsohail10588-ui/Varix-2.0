@@ -3,7 +3,7 @@
 import React from "react";
 import { X, Clock, FileText, MessageSquare, Terminal, Loader2, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
-import api from "@/lib/api";
+import apiClient from "@/services/apiClient";
 import { useState } from "react";
 
 interface ContextPanelProps {
@@ -27,7 +27,7 @@ export default function ContextPanel({ isOpen, onClose, data }: ContextPanelProp
         try {
             const isWorkflow = data.type === "WORKFLOW_TASK" || data.id?.startsWith("TSK");
             const endpoint = isWorkflow ? `/close/tasks/${data.id}/comments` : `/controls/violations/${data.id}/comments`;
-            await api.post(endpoint, { comment });
+            await apiClient.post(endpoint, { comment });
             setComment("");
             alert("Comment posted to internal thread.");
         } catch (error) {
@@ -40,7 +40,7 @@ export default function ContextPanel({ isOpen, onClose, data }: ContextPanelProp
     const handleEscalate = async () => {
         setIsEscalating(true);
         try {
-            await api.post(`/governance/tasks/${data.id}/approve`, { reason: "CFO Review Required" });
+            await apiClient.post(`/governance/tasks/${data.id}/approve`, { reason: "CFO Review Required" });
             alert("Issue escalated to CFO.");
         } catch (error) {
             console.error("Escalation failed", error);
@@ -53,7 +53,7 @@ export default function ContextPanel({ isOpen, onClose, data }: ContextPanelProp
         setIsResolving(true);
         try {
             // Connect to real backend for resolution
-            await api.patch(`/controls/violations/${data.id || "mock"}/resolve`);
+            await apiClient.patch(`/controls/violations/${data.id || "mock"}/resolve`);
             setIsResolved(true);
             setTimeout(() => {
                 onClose();

@@ -1,6 +1,6 @@
 "use client";
 
-import { useSystem } from "@/context/SystemContext";
+import { useSystemState } from "@/state/SystemStateProvider";
 import SystemActionBar from "@/components/enterprise/SystemActionBar";
 import ConnectorStatusCard from "@/components/enterprise/ConnectorStatusCard";
 import { Plug, Rocket, Zap, Layers, ShieldCheck, Database } from "lucide-react";
@@ -9,7 +9,7 @@ import TestImportModal from "@/components/modals/TestImportModal";
 import { erpService } from "@/services/erpService";
 
 export default function IntegrationsPage() {
-    const { erp, loading, refresh } = useSystem();
+    const { erp, loading, refresh } = useSystemState();
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
     const [syncingId, setSyncingId] = useState<string | null>(null);
 

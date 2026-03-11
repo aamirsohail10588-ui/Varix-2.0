@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import api from "@/lib/api";
+import apiClient from "@/services/apiClient";
 import Cookies from "js-cookie";
 
 import { Button } from "@/components/ui/button";
@@ -25,7 +25,7 @@ export default function LoginPage() {
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            const res = await api.post("/auth/login", { email, password });
+            const res = await apiClient.post("/auth/login", { email, password });
 
             const data = res.data;
 

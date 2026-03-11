@@ -6,7 +6,7 @@ import TopBar from "./TopBar";
 import { cn } from "@/lib/utils";
 import Cookies from "js-cookie";
 import { useRouter, usePathname } from "next/navigation";
-import api from "@/lib/api";
+import apiClient from "@/services/apiClient";
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
     const [collapsed, setCollapsed] = useState(false);

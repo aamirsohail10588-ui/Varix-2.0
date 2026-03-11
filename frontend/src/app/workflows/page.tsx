@@ -1,14 +1,14 @@
 "use client";
 
 import React from "react";
-import { useSystem } from "@/context/SystemContext";
+import { useSystemState } from "@/state/SystemStateProvider";
 import SystemActionBar from "@/components/enterprise/SystemActionBar";
 import MetricTile from "@/components/enterprise/MetricTile";
 import OperationalTable from "@/components/enterprise/OperationalTable";
 import { Zap, Clock, CheckCircle2, AlertCircle } from "lucide-react";
 
 export default function WorkflowsPage() {
-    const { governance, loading, refresh } = useSystem();
+    const { governance, loading, refresh } = useSystemState();
 
     if (loading) {
         return (

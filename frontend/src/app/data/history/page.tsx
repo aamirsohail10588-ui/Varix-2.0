@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { useSystem } from "@/context/SystemContext";
+import { useSystemState } from "@/state/SystemStateProvider";
 import SystemActionBar from "@/components/enterprise/SystemActionBar";
 import MetricTile from "@/components/enterprise/MetricTile";
 import OperationalTable from "@/components/enterprise/OperationalTable";
@@ -9,7 +9,7 @@ import { History, Database, CheckCircle2, Clock, Eye, Download } from "lucide-re
 import { cn } from "@/lib/utils";
 
 export default function HistoryPage() {
-    const { ingestion, loading, refresh } = useSystem();
+    const { ingestion, loading, refresh } = useSystemState();
 
     if (loading) {
         return (

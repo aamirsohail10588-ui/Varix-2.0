@@ -1,14 +1,14 @@
 "use client";
 
 import React from "react";
-import { useSystem } from "@/context/SystemContext";
+import { useSystemState } from "@/state/SystemStateProvider";
 import SystemActionBar from "@/components/enterprise/SystemActionBar";
 import MetricTile from "@/components/enterprise/MetricTile";
 import OperationalTable from "@/components/enterprise/OperationalTable";
 import { CalendarCheck, ShieldCheck, Clock, Zap, FileText } from "lucide-react";
 
 export default function ClosePage() {
-    const { governance, loading, refresh } = useSystem();
+    const { governance, loading, refresh } = useSystemState();
 
     if (loading) {
         return (

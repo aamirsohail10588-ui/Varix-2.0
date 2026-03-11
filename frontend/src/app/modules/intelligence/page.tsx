@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { useSystem } from "@/context/SystemContext";
+import { useSystemState } from "@/state/SystemStateProvider";
 import SystemActionBar from "@/components/enterprise/SystemActionBar";
 import MetricTile from "@/components/enterprise/MetricTile";
 import OperationalTable from "@/components/enterprise/OperationalTable";
@@ -9,7 +9,7 @@ import { BrainCircuit, Zap, BarChart3, TrendingUp, ShieldCheck, Search } from "l
 import { cn } from "@/lib/utils";
 
 export default function IntelligencePage() {
-    const { integrity, anomalies, loading, refresh } = useSystem();
+    const { integrity, anomalies, loading, refresh } = useSystemState();
 
     if (loading || !integrity || !anomalies) {
         return (

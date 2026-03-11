@@ -1,14 +1,14 @@
 "use client";
 
 import React from "react";
-import { useSystem } from "@/context/SystemContext";
+import { useSystemState } from "@/state/SystemStateProvider";
 import SystemActionBar from "@/components/enterprise/SystemActionBar";
 import MetricTile from "@/components/enterprise/MetricTile";
 import IssueTable from "@/components/enterprise/IssueTable";
 import { ShieldCheck, Scale, Eye, Search, Activity } from "lucide-react";
 
 export default function IntegrityPage() {
-    const { integrity, anomalies, governance, loading, refresh } = useSystem();
+    const { integrity, anomalies, governance, loading, refresh } = useSystemState();
 
     if (loading || !integrity || !anomalies) {
         return (

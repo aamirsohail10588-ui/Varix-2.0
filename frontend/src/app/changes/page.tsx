@@ -1,22 +1,22 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { useSystem } from "@/context/SystemContext";
+import { useSystemState } from "@/state/SystemStateProvider";
 import SystemActionBar from "@/components/enterprise/SystemActionBar";
 import MetricTile from "@/components/enterprise/MetricTile";
 import OperationalTable from "@/components/enterprise/OperationalTable";
-import api from "@/lib/api";
+import apiClient from "@/services/apiClient";
 import { RefreshCcw, FileText, History, Zap } from "lucide-react";
 
 export default function ChangesPage() {
-    const { loading, refresh } = useSystem();
+    const { loading, refresh } = useSystemState();
     const [changes, setChanges] = useState<any[]>([]);
     const [isFetching, setIsFetching] = useState(false);
 
     const fetchChanges = async () => {
         setIsFetching(true);
         try {
-            const response = await api.get("/changes/recent");
+            const response = await apiClient.get("/changes/recent");
             setChanges(response.data.data || []);
         } catch (error) {
             console.error("Failed to fetch changes", error);

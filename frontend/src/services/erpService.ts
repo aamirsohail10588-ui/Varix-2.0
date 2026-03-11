@@ -1,30 +1,23 @@
-import api from "@/lib/api";
+import apiClient from "./apiClient";
 
 export interface ERPConnector {
     id: string;
-    name: string;
-    connector_type: string; // Match backend naming
-    status: "active" | "inactive" | "error";
-    last_sync_at: string;
-    rows_processed: number;
-    sync_frequency: string;
+    type: "ZOHO" | "TALLY" | "SAP";
+    status: "CONNECTED" | "DISCONNECTED" | "SYNCING" | "ERROR";
+    last_sync?: string;
 }
 
 export const erpService = {
     async getConnectors(): Promise<ERPConnector[]> {
-        const response = await api.get("/ingestion/connectors/status");
-        return response.data.connectors || [];
+        const response = await apiClient.get("/ingestion/connectors/status");
+        return response.data;
     },
 
-    async triggerSync(connectorId: string) {
-        return api.post("/ingestion/connectors/sync", { connectorId });
+    async createConnector(data: any) {
+        return apiClient.post("/ingestion/connectors/create", data);
     },
 
-    async createConnector(type: string, config: any) {
-        return api.post("/ingestion/connectors/create", {
-            type,
-            config,
-            frequency: "DAILY"
-        });
+    async syncConnector(connectorId: string) {
+        return apiClient.post("/ingestion/connectors/sync", { connectorId });
     }
 };

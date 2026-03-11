@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { useSystem } from "@/context/SystemContext";
+import { useSystemState } from "@/state/SystemStateProvider";
 import SystemActionBar from "@/components/enterprise/SystemActionBar";
 import MetricTile from "@/components/enterprise/MetricTile";
 import OperationalTable from "@/components/enterprise/OperationalTable";
@@ -9,7 +9,7 @@ import { Layers, ShieldCheck, RefreshCcw, Activity, AlertTriangle } from "lucide
 import { cn } from "@/lib/utils";
 
 export default function ConsolidationPage() {
-    const { integrity, governance, loading, refresh } = useSystem();
+    const { integrity, governance, loading, refresh } = useSystemState();
 
     if (loading || !integrity) {
         return (

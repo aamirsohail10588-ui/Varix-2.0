@@ -1,23 +1,23 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { useSystem } from "@/context/SystemContext";
+import { useSystemState } from "@/state/SystemStateProvider";
 import SystemActionBar from "@/components/enterprise/SystemActionBar";
 import MetricTile from "@/components/enterprise/MetricTile";
 import OperationalTable from "@/components/enterprise/OperationalTable";
-import api from "@/lib/api";
+import apiClient from "@/services/apiClient";
 import { FileText, Printer, CheckCircle2, Zap, Clock, History } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function ReportsPage() {
-    const { loading, refresh } = useSystem();
+    const { loading, refresh } = useSystemState();
     const [reports, setReports] = useState<any[]>([]);
     const [isFetching, setIsFetching] = useState(false);
 
     const fetchReports = async () => {
         setIsFetching(true);
         try {
-            const response = await api.get("/tenants/audit-logs?action=REPORT_GENERATED");
+            const response = await apiClient.get("/tenants/audit-logs?action=REPORT_GENERATED");
             setReports(response.data.logs || []);
         } catch (error) {
             console.error("Failed to fetch reports", error);

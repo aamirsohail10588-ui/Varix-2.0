@@ -27,21 +27,24 @@ import SystemStatusIndicator from "@/components/authority/SystemStatusIndicator"
 // Enterprise Components
 import MetricTile from "@/components/enterprise/MetricTile";
 
-// Context
-import { useSystem } from "@/context/SystemContext";
+// State
+import { useSystemState } from "@/state/SystemStateProvider";
 
 export default function DashboardPage() {
     const {
         health,
         ledger,
         ingestion,
+        reconciliation,
         governance,
         anomalies,
         integrity,
         loading,
         error,
-        refresh
-    } = useSystem();
+        refresh,
+        erp,
+        fpna
+    } = useSystemState();
 
     if (loading) {
         return (
@@ -90,8 +93,8 @@ export default function DashboardPage() {
                             state="ACTIVE"
                             href="/entities"
                             metrics={[
-                                { label: "Connectors", value: 12 },
-                                { label: "State", value: "Syncing", status: "success" }
+                                { label: "Connectors", value: erp.connectors.length },
+                                { label: "State", value: erp.connectors.some(c => c.status === 'SYNCING') ? "Syncing" : "Active", status: "success" }
                             ]}
                         />
                         <PipelineConnector direction="vertical" className="h-8 mx-auto" />
@@ -257,7 +260,7 @@ export default function DashboardPage() {
                             state="ACTIVE"
                             href="/modules/analytics"
                             metrics={[
-                                { label: "Accuracy", value: "99.4%" }
+                                { label: "Variance", value: fpna.summary ? `${fpna.summary.forecast_variance}%` : "0.0%" }
                             ]}
                         />
                         <div className="col-span-2">
