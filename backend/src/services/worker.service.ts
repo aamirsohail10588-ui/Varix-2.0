@@ -55,13 +55,6 @@ class WorkerService {
         const { tenantId, batchId, snapshotId, period } = payload;
 
         switch (type) {
-            case JobType.NORMALIZATION:
-                if (batchId && snapshotId) {
-                    console.log(`[WORKER] Starting Normalization for batch ${batchId}...`);
-                    await accountingService.normalizeBatch(tenantId, batchId, snapshotId);
-                    await this.pushJob(JobType.VALIDATION, { tenantId, batchId, snapshotId });
-                }
-                break;
 
             case JobType.VALIDATION:
                 if (batchId && snapshotId) {

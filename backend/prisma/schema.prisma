@@ -323,12 +323,14 @@ model Snapshot {
   changeEvents       ChangeEvent[]
   controlRuns        ControlRun[]
   rawRecords         RawRecord[]
+  updatedAt          DateTime           @updatedAt
+  graph_processed    Boolean            @default(false)
   batch              IngestionBatch     @relation(fields: [batch_id], references: [id])
- tenant             Tenant             @relation(fields: [tenant_id], references: [id])
+  tenant             Tenant             @relation(fields: [tenant_id], references: [id])
 
-ledgerEntries      LedgerEntry[]
+  ledgerEntries      LedgerEntry[]
 
-@@map("snapshots")
+  @@map("snapshots")
 }
 
 model RawRecord {

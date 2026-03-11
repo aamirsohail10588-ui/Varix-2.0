@@ -1,69 +1,42 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import api from "@/lib/api";
-import { Plug, Zap, CheckCircle, RefreshCw, Layers, ShieldCheck, Database, RefreshCcw, Rocket } from "lucide-react";
-import Cookies from "js-cookie";
-import TestImportModal from "../../components/modals/TestImportModal";
+import { useSystem } from "@/context/SystemContext";
+import SystemActionBar from "@/components/enterprise/SystemActionBar";
+import ConnectorStatusCard from "@/components/enterprise/ConnectorStatusCard";
+import { Plug, Rocket, Zap, Layers, ShieldCheck, Database } from "lucide-react";
+import { useState } from "react";
+import TestImportModal from "@/components/modals/TestImportModal";
+import { erpService } from "@/services/erpService";
 
 export default function IntegrationsPage() {
-    const [connectors, setConnectors] = useState<any[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [isSyncing, setIsSyncing] = useState<string | null>(null);
+    const { erp, loading, refresh } = useSystem();
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+    const [syncingId, setSyncingId] = useState<string | null>(null);
 
     const availableConnectors = [
-        { id: "TALLY_CONNECTOR", name: "Tally Prime", description: "Real-time sync for localized ledgers and vouchers.", icon: <Database /> },
-        { id: "ZOHO_CONNECTOR", name: "Zoho Books", description: "Sync global invoices and vendor matching dynamically.", icon: <Layers /> },
-        { id: "SAP_CONNECTOR", name: "SAP S/4HANA", description: "Enterprise mapping for cost centers and control validation.", icon: <ShieldCheck /> }
+        { id: "TALLY_CONNECTOR", name: "Tally Prime", description: "Real-time sync for localized ledgers and vouchers.", icon: Database },
+        { id: "ZOHO_BOOKS", name: "Zoho Books", description: "Sync global invoices and vendor matching dynamically.", icon: Layers },
+        { id: "SAP_ERP", name: "SAP S/4HANA", description: "Enterprise mapping for cost centers and control validation.", icon: ShieldCheck }
     ];
 
-    useEffect(() => {
-        fetchConnectors();
-    }, []);
-
-    const fetchConnectors = async () => {
+    const handleSync = async (connectorId: string) => {
+        setSyncingId(connectorId);
         try {
-            const res = await api.get("/ingestion/connectors/status");
-            setConnectors(res.data.connectors || []);
+            await erpService.triggerSync(connectorId);
+            await refresh();
         } catch (error) {
-            console.error("Failed to load integrations", error);
+            console.error("Sync failed", error);
         } finally {
-            setLoading(false);
+            setSyncingId(null);
         }
     };
 
     const handleConnect = async (type: string) => {
         try {
-            const token = Cookies.get("token");
-            const tenantId = localStorage.getItem("activeTenantId");
-
-            // Generate mock config cleanly seamlessly connecting natively
-            const config = { api_key: "MOCK_KEY_123", endpoint: `https://api.${type.toLowerCase()}.com/v1` };
-
-            await api.post("/ingestion/connectors/create", {
-                type, config, frequency: "DAILY"
-            });
-
-            await fetchConnectors();
+            await erpService.createConnector(type, { api_key: "MOCK", endpoint: "https://api.test.com" });
+            await refresh();
         } catch (error) {
-            console.error("Failed to connect", error);
-        }
-    };
-
-    const handleSync = async (connectorId: string) => {
-        setIsSyncing(connectorId);
-        try {
-            const token = Cookies.get("token");
-            const tenantId = localStorage.getItem("activeTenantId");
-
-            await api.post("/ingestion/connectors/sync", { connectorId });
-
-            await fetchConnectors();
-        } catch (error) {
-            console.error("Failed to sync natively", error);
-        } finally {
-            setIsSyncing(null);
+            console.error("Connection failed", error);
         }
     };
 
@@ -76,71 +49,44 @@ export default function IntegrationsPage() {
     }
 
     return (
-        <div className="p-8 max-w-6xl mx-auto">
-            <div className="mb-10 flex justify-between items-center">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-slate-900 mb-2 flex items-center gap-3">
-                        <Plug className="text-primary-brand" /> ERP Connections
-                    </h1>
-                    <p className="text-slate-500 text-sm">Direct, governed synchronization with your systems of record.</p>
-                </div>
-                <button
-                    onClick={() => setIsImportModalOpen(true)}
-                    className="flex items-center gap-2 px-6 py-3 bg-white border border-slate-200 rounded-xl font-bold text-slate-700 hover:bg-slate-50 transition-all shadow-sm group"
-                >
-                    <Rocket size={18} className="text-primary-brand group-hover:scale-110 transition-transform" />
-                    Import Test Dataset
-                </button>
-            </div>
+        <div className="space-y-8">
+            <SystemActionBar
+                title="ERP Connections"
+                actions={[
+                    { label: "Import Test Dataset", icon: Rocket, onClick: () => setIsImportModalOpen(true) },
+                    { label: "Establish New Node", icon: Zap, onClick: () => console.log("New node..."), variant: "primary" }
+                ]}
+            />
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {availableConnectors.map((ac) => {
-                    const activeConnection = connectors.find(c => c.connector_type === ac.id);
+                    const active = erp.connectors.find(c => c.connector_type === ac.id);
+
+                    if (active) {
+                        return (
+                            <ConnectorStatusCard
+                                key={active.id}
+                                connector={active}
+                                onSync={() => handleSync(active.id)}
+                            />
+                        );
+                    }
 
                     return (
                         <div key={ac.id} className="bg-white border border-slate-200 rounded-2xl p-6 flex flex-col justify-between group hover:shadow-lg transition-all">
                             <div>
                                 <div className="w-12 h-12 rounded-xl bg-blue-50 text-primary-brand flex items-center justify-center mb-4 border border-blue-100">
-                                    {ac.icon}
+                                    <ac.icon size={24} />
                                 </div>
                                 <h3 className="text-xl font-bold text-slate-900 mb-2">{ac.name}</h3>
                                 <p className="text-sm text-slate-500 mb-6">{ac.description}</p>
                             </div>
-
-                            {activeConnection ? (
-                                <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
-                                    <div className="flex justify-between items-center mb-4">
-                                        <span className="flex items-center gap-2 text-sm text-emerald-600 font-bold">
-                                            <CheckCircle size={16} /> Connected
-                                        </span>
-                                        <span className="text-[10px] text-slate-400 font-bold tracking-widest uppercase">
-                                            {activeConnection.sync_frequency}
-                                        </span>
-                                    </div>
-                                    <div className="flex justify-between items-end">
-                                        <div>
-                                            <p className="text-[10px] text-slate-400 font-bold uppercase mb-1">Last Sync</p>
-                                            <p className="text-xs font-semibold text-slate-700">
-                                                {activeConnection.last_sync_at ? new Date(activeConnection.last_sync_at).toLocaleDateString() : "Never mapped"}
-                                            </p>
-                                        </div>
-                                        <button
-                                            onClick={() => handleSync(activeConnection.id)}
-                                            disabled={isSyncing === activeConnection.id}
-                                            className={`p-2 rounded-lg transition-colors ${isSyncing === activeConnection.id ? "bg-slate-200 text-slate-400 cursor-not-allowed" : "bg-white border border-slate-200 hover:bg-slate-100 text-slate-600 shadow-sm"}`}
-                                        >
-                                            <RefreshCcw size={16} className={isSyncing === activeConnection.id ? "animate-spin" : ""} />
-                                        </button>
-                                    </div>
-                                </div>
-                            ) : (
-                                <button
-                                    onClick={() => handleConnect(ac.id)}
-                                    className="w-full py-3 bg-primary-brand hover:bg-blue-700 text-white rounded-xl font-bold transition flex justify-center items-center gap-2 shadow-sm"
-                                >
-                                    <Zap size={16} /> Establish Connection
-                                </button>
-                            )}
+                            <button
+                                onClick={() => handleConnect(ac.id)}
+                                className="w-full py-3 bg-slate-900 hover:bg-black text-white rounded-xl font-bold transition flex justify-center items-center gap-2 shadow-sm text-[11px] uppercase tracking-widest"
+                            >
+                                <Zap size={14} /> Establish Connection
+                            </button>
                         </div>
                     );
                 })}
@@ -149,7 +95,7 @@ export default function IntegrationsPage() {
             <TestImportModal
                 isOpen={isImportModalOpen}
                 onClose={() => setIsImportModalOpen(false)}
-                onSuccess={fetchConnectors}
+                onSuccess={refresh}
             />
         </div>
     );

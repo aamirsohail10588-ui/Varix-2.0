@@ -24,7 +24,7 @@
  *   — Relations are: childOf (EntityHierarchy[]) and parentOf (EntityHierarchy[])
  */
 
-import prisma from "../lib/prisma";
+import prisma from "../infrastructure/prisma"
 import { Decimal } from "decimal.js";
 
 export class ConsolidationService {

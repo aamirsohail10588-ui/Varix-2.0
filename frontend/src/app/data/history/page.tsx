@@ -1,76 +1,104 @@
 "use client";
 
 import React from "react";
-import ModuleWorkspace from "../../components/dashboard/ModuleWorkspace";
+import { useSystem } from "@/context/SystemContext";
+import SystemActionBar from "@/components/enterprise/SystemActionBar";
+import MetricTile from "@/components/enterprise/MetricTile";
+import OperationalTable from "@/components/enterprise/OperationalTable";
+import { History, Database, CheckCircle2, Clock, Eye, Download } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export default function HistoryPage() {
-    const metrics = [
-        { title: "Total Batches", value: "1,240", trend: 12.5, status: "info" as const },
-        { title: "Records Ingested", value: "854.2", trend: 8.2, status: "success" as const, suffix: "K" },
-        { title: "Success Rate", value: "99.8", trend: 0.1, status: "success" as const, suffix: "%" },
-        { title: "Avg Duration", value: "4.2", trend: -5.4, status: "success" as const, suffix: "min" },
-    ];
+    const { ingestion, loading, refresh } = useSystem();
 
-    const columns = [
-        { header: "Batch ID", accessor: "id" },
-        { header: "Source System", accessor: "source" },
-        { header: "Record Count", accessor: "count" },
-        { header: "Status", accessor: "status" },
-        { header: "Start Time", accessor: "startTime" },
-        { header: "End Time", accessor: "endTime" },
-        { header: "Error Count", accessor: "errors" },
-    ];
-
-    const data = [
-        {
-            id: "BAT-9901",
-            source: "SAP S/4HANA",
-            count: "12,450",
-            status: "Success",
-            startTime: "Mar 06, 2026 09:12 AM",
-            endTime: "Mar 06, 2026 09:15 AM",
-            errors: 0,
-            description: "Full snapshot synchronization for AR Sub-ledger. Transformation mapping applied: SAP_BASIC_RECON. No validation errors detected."
-        },
-        {
-            id: "BAT-9902",
-            source: "Oracle NetSuite",
-            count: "8,200",
-            status: "Resolved",
-            startTime: "Mar 06, 2026 08:30 AM",
-            endTime: "Mar 06, 2026 08:34 AM",
-            errors: 12,
-            description: "Incremental load of journal entries. 12 records failed validation initially due to missing entity mapping but were resolved via auto-mapping engine."
-        },
-        {
-            id: "BAT-9903",
-            source: "Tally Prime",
-            count: "450",
-            status: "Error",
-            startTime: "Mar 06, 2026 07:00 AM",
-            endTime: "Mar 06, 2026 07:02 AM",
-            errors: 450,
-            description: "Agent connection timed out during extraction. Tally ODBC driver failed to respond. Retrying in 15 minutes."
-        },
-        {
-            id: "BAT-9904",
-            source: "Zoho Books",
-            count: "1,150",
-            status: "In Review",
-            startTime: "Mar 06, 2026 06:15 AM",
-            endTime: "Mar 06, 2026 06:17 AM",
-            errors: 0,
-            description: "Scheduled daily sync of expense records. Integration health check: Optimal. Quality score: 100%."
-        },
-    ];
+    if (loading) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
+                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-brand"></div>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest italic">Retrieving Ingestion History...</span>
+            </div>
+        );
+    }
 
     return (
-        <ModuleWorkspace
-            title="Ingestion History"
-            description="Audit the lifecycle of every data packet ingested into VARIX. Track batch statuses, record counts, and synchronization lineages from all source systems."
-            metrics={metrics}
-            tableColumns={columns}
-            tableData={data}
-        />
+        <div className="space-y-6">
+            <SystemActionBar
+                title="Ingestion History"
+                actions={[
+                    { label: "Refresh History", icon: History, onClick: refresh, variant: "primary" },
+                    { label: "Export Audit Log", icon: Download, onClick: () => console.log("Exporting...") }
+                ]}
+            />
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <MetricTile
+                    title="Total Batches"
+                    value={ingestion.history.length}
+                    trend={12.5}
+                    status="info"
+                    icon={Database}
+                />
+                <MetricTile
+                    title="Active Queue"
+                    value={ingestion.queueDepth}
+                    status={ingestion.queueDepth > 0 ? "warning" : "success"}
+                    icon={Clock}
+                />
+                <MetricTile
+                    title="Ingestion Health"
+                    value="99.8"
+                    status="success"
+                    suffix="%"
+                    icon={CheckCircle2}
+                />
+                <MetricTile
+                    title="System Latency"
+                    value="30ms"
+                    status="success"
+                    icon={History}
+                />
+            </div>
+
+            <div className="bg-white border border-slate-100 rounded-xl overflow-hidden shadow-sm">
+                <div className="px-4 py-3 border-b border-slate-50 bg-slate-50/30">
+                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Operation Pipeline Stream</span>
+                </div>
+                <OperationalTable
+                    data={ingestion.history.map(s => ({
+                        id: s.id,
+                        source: s.source_system || "SYSTEM_CSV",
+                        count: (s.record_count || 0).toLocaleString(),
+                        status: s.status,
+                        date: new Date(s.created_at).toLocaleString()
+                    }))}
+                    columns={[
+                        { header: "Snapshot ID", accessor: (item: any) => <span className="font-mono">{item.id.substring(0, 8)}</span> },
+                        { header: "Source Node", accessor: "source", className: "font-bold text-slate-800" },
+                        { header: "Volume", accessor: "count" },
+                        {
+                            header: "Status",
+                            accessor: (item: any) => (
+                                <span className={cn(
+                                    "px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-tighter",
+                                    item.status === "COMPLETED" ? "bg-emerald-50 text-emerald-600" : "bg-blue-50 text-blue-600"
+                                )}>
+                                    {item.status}
+                                </span>
+                            )
+                        },
+                        { header: "Detected At", accessor: "date" },
+                        {
+                            header: "Actions",
+                            accessor: () => (
+                                <button className="p-1 hover:bg-slate-100 rounded transition-colors text-slate-400">
+                                    <Eye size={14} />
+                                </button>
+                            ),
+                            className: "text-right"
+                        }
+                    ]}
+                />
+            </div>
+        </div>
     );
 }

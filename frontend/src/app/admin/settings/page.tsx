@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import ModuleWorkspace from "../../components/dashboard/ModuleWorkspace";
+import ModuleWorkspace from "@/components/dashboard/ModuleWorkspace";
 
 export default function SettingsAdminPage() {
     const metrics = [

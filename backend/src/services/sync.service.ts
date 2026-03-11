@@ -14,7 +14,7 @@
  * - SAP sync logic → to be built
  */
 
-import prisma from "../lib/prisma";
+import prisma from "../infrastructure/prisma"
 import { logAuditAction } from "./audit.service";
 import type { ErpConnector } from "@prisma/client";
 

@@ -344,6 +344,14 @@ async function triggerAnalyticsRecalculation(tenantId: string): Promise<void> {
 
 async function pollPendingSnapshots(): Promise<void> {
     try {
+        // Automatic recovery logic: Reset snapshots stuck in PROCESSING for > 10 minutes
+        await prisma.$executeRaw`
+            UPDATE snapshots
+            SET status = 'UNPROCESSED'
+            WHERE status = 'PROCESSING'
+            AND "updatedAt" < NOW() - INTERVAL '10 minutes'
+        `;
+
         const targetSnapshots = await prisma.$queryRawUnsafe<{ id: string }[]>(`
             SELECT id FROM snapshots
             WHERE status IN ('UNPROCESSED', 'PROCESSING')

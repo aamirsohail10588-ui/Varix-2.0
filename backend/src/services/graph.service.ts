@@ -5,7 +5,7 @@
  * STATUS: ACTIVE
  */
 
-import prisma from "../lib/prisma";
+import prisma from "../infrastructure/prisma"
 
 export const buildGraphNetwork = async (tenantId: string): Promise<boolean> => {
     const nodes = new Map<string, { type: string; ref: string }>();

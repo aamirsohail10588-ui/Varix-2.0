@@ -1,73 +1,82 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import ModuleWorkspace from "../components/dashboard/ModuleWorkspace";
-import api from "@/lib/api";
+import React from "react";
+import { useSystem } from "@/context/SystemContext";
+import SystemActionBar from "@/components/enterprise/SystemActionBar";
+import MetricTile from "@/components/enterprise/MetricTile";
+import IssueTable from "@/components/enterprise/IssueTable";
+import { ShieldCheck, Scale, Eye, Search, Activity } from "lucide-react";
 
 export default function IntegrityPage() {
-    const [metrics, setMetrics] = useState([
-        { title: "Integrity Score", value: "...", trend: 0, status: "info" as any, suffix: "pts" },
-        { title: "Mismatch Rate", value: "...", status: "info" as any },
-        { title: "Open Issues", value: "...", status: "info" as any },
-        { title: "Evidence Coverage", value: "...", status: "info" as any, suffix: "%" },
-    ]);
-    const [tableData, setTableData] = useState<any[]>([]);
+    const { integrity, anomalies, governance, loading, refresh } = useSystem();
 
-    useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const [healthRes, violationsRes] = await Promise.all([
-                    api.get("/analytics/financial-health"),
-                    api.get("/governance/violations")
-                ]);
+    if (loading || !integrity || !anomalies) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
+                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-brand"></div>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest italic">Attesting Integrity Signals...</span>
+            </div>
+        );
+    }
 
-                if (healthRes.data) {
-                    const h = healthRes.data;
-                    setMetrics([
-                        { title: "Integrity Score", value: (h.final_score || 0).toFixed(1), trend: 2.1, status: "success", suffix: "pts" },
-                        { title: "Integrity Component", value: ((h.integrity_component || 0) * 100).toFixed(1), status: "warning" },
-                        { title: "Open Issues", value: violationsRes.data.violations.length.toString(), status: "error" },
-                        { title: "Evidence Coverage", value: ((h.evidence_component || 0) * 100).toFixed(1), status: "success", suffix: "%" },
-                    ]);
-                }
-
-                if (violationsRes.data.violations) {
-                    setTableData(violationsRes.data.violations.map((v: any) => ({
-                        id: v.id,
-                        issueType: v.controlSpec.name,
-                        account: v.entity_reference,
-                        amount: v.controlSpec.parameters?.threshold ? `$ ${v.controlSpec.parameters.threshold}` : "N/A",
-                        source: "ERP Ingestion",
-                        date: new Date(v.created_at).toLocaleDateString(),
-                        owner: "Unassigned",
-                        status: v.severity,
-                        description: v.violation_message
-                    })));
-                }
-            } catch (error) {
-                console.error("Failed to fetch integrity data", error);
-            }
-        };
-
-        fetchData();
-    }, []);
-
-    const columns = [
-        { header: "Issue Type", accessor: "issueType" },
-        { header: "Reference", accessor: "account" },
-        { header: "Threshold", accessor: "amount" },
-        { header: "Source", accessor: "source" },
-        { header: "Detected", accessor: "date" },
-        { header: "Severity", accessor: "status" },
-    ];
+    const issues = governance.violations.map(v => ({
+        id: v.id,
+        title: v.type, // Map 'type' to 'title' for IssueTable
+        severity: (v.severity === "high" ? "critical" : v.severity) as any,
+        status: v.status,
+        detectedAt: "2026-03-11" // Placeholder for now, should come from API
+    }));
 
     return (
-        <ModuleWorkspace
-            title="Financial Integrity"
-            description="Autonomous surveillance and validation of your financial truth. Monitor ledger consistency, entity mapping, and automated reconciliation health."
-            metrics={metrics}
-            tableColumns={columns}
-            tableData={tableData}
-        />
+        <div className="space-y-6">
+            <SystemActionBar
+                title="Financial Integrity"
+                actions={[
+                    { label: "Run Integrity Scan", icon: ShieldCheck, onClick: refresh, variant: "primary" },
+                    { label: "Export Evidence", icon: Scale, onClick: () => console.log("Exporting...") }
+                ]}
+            />
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <MetricTile
+                    title="Integrity Score"
+                    value={integrity.final_score.toFixed(1)}
+                    trend={2.1}
+                    status={(integrity.final_score || 0) > 90 ? "success" : "warning"}
+                    suffix="pts"
+                    icon={ShieldCheck}
+                />
+                <MetricTile
+                    title="Integrity Component"
+                    value={(integrity.integrity_component).toFixed(1)}
+                    status={(integrity.integrity_component || 0) > 90 ? "success" : "warning"}
+                    icon={Activity}
+                />
+                <MetricTile
+                    title="Journal Risk"
+                    value={anomalies.journal_risk.toFixed(1)}
+                    trend={-5.2}
+                    status={anomalies.journal_risk < 40 ? "success" : "error"}
+                    icon={Search}
+                />
+                <MetricTile
+                    title="Open Integrity Gaps"
+                    value={governance.violations.length}
+                    status={governance.violations.length > 0 ? "error" : "success"}
+                    icon={Eye}
+                />
+            </div>
+
+            <div className="bg-white border border-slate-100 rounded-xl overflow-hidden shadow-sm">
+                <div className="px-4 py-3 border-b border-slate-50 bg-slate-50/30 flex items-center justify-between">
+                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Active Integrity Violations</span>
+                    <span className="px-2 py-0.5 bg-rose-50 text-rose-600 text-[9px] font-black rounded uppercase tracking-tighter">Real-time Detection</span>
+                </div>
+                <IssueTable
+                    issues={issues}
+                    onResolve={(id) => console.log("Resolving", id)}
+                />
+            </div>
+        </div>
     );
 }

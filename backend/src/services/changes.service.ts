@@ -1,4 +1,4 @@
-import prisma from "../lib/prisma";
+import prisma from "../infrastructure/prisma"
 import _ from "lodash";
 
 export const detectSnapshotChanges = async (tenantId: string, currentSnapshotId: string, previousSnapshotId: string) => {

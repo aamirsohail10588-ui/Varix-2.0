@@ -5,7 +5,7 @@
  * STATUS: ACTIVE
  */
 
-import prisma from "../lib/prisma";
+import prisma from "../infrastructure/prisma"
 
 export class GstService {
 

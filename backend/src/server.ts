@@ -61,12 +61,20 @@ const server = app.listen(port, async () => {
             ON raw_records ((payload_json->>'account_code'));
         `);
 
-        // 2. Clean up orphaned staging tables
+        // 2. Clean up orphaned staging tables (SAFE VERSION)
         const tables = await prisma.$queryRawUnsafe<{ tablename: string }[]>(`
-            SELECT tablename FROM pg_tables WHERE tablename LIKE 'staging_%'
-        `);
+    SELECT tablename
+    FROM pg_tables
+    WHERE tablename LIKE 'staging_%'
+      AND tablename NOT IN (
+          SELECT 'staging_' || replace(id::text,'-','')
+          FROM ingestion_batches
+          WHERE status IN ('processing','pending')
+      )
+`);
+
         for (const { tablename } of tables) {
-            await prisma.$executeRawUnsafe(`DROP TABLE IF EXISTS ${tablename}`);
+            await prisma.$executeRawUnsafe(`DROP TABLE IF EXISTS "${tablename}"`);
             console.log(`[Startup] Cleaned up orphaned staging table: ${tablename}`);
         }
     } catch (err) {

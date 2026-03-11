@@ -271,6 +271,27 @@ export class IngestionService {
         });
     }
 
+    async getHistory(tenantId: string) {
+        return prisma.snapshot.findMany({
+            where: { tenant_id: tenantId },
+            include: {
+                batch: true
+            },
+            orderBy: { snapshot_timestamp: "desc" }
+        });
+    }
+
+    async getRecent(tenantId: string, limit: number = 10) {
+        return prisma.snapshot.findMany({
+            where: { tenant_id: tenantId },
+            include: {
+                batch: true
+            },
+            orderBy: { snapshot_timestamp: "desc" },
+            take: limit
+        });
+    }
+
     async insertRawRecords(
         batchId: string,
         payloads: RawPayloadRow[],

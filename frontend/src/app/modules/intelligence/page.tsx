@@ -1,85 +1,119 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import ModuleWorkspace from "../../components/dashboard/ModuleWorkspace";
-import api from "@/lib/api";
+import React from "react";
+import { useSystem } from "@/context/SystemContext";
+import SystemActionBar from "@/components/enterprise/SystemActionBar";
+import MetricTile from "@/components/enterprise/MetricTile";
+import OperationalTable from "@/components/enterprise/OperationalTable";
+import { BrainCircuit, Zap, BarChart3, TrendingUp, ShieldCheck, Search } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export default function IntelligencePage() {
-    const [metrics, setMetrics] = useState([
-        { title: "Intelligence Score", value: "...", trend: 0, status: "success" as any, suffix: "pts" },
-        { title: "Insight Velocity", value: "...", status: "info" as any, suffix: "/mo" },
-        { title: "Critical Alerts", value: "...", status: "error" as any },
-        { title: "ROI Projection", value: "1.2", trend: 5.4, status: "success" as any, suffix: "M" },
-    ]);
-    const [tableData, setTableData] = useState<any[]>([]);
+    const { integrity, anomalies, loading, refresh } = useSystem();
 
-    useEffect(() => {
-        const fetchIntelligence = async () => {
-            try {
-                const period = "2026-Q1";
+    if (loading || !integrity || !anomalies) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
+                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-brand"></div>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest italic">Synthesizing Intelligence...</span>
+            </div>
+        );
+    }
 
-                const [healthRes, riskRes, networkRes] = await Promise.all([
-                    api.get(`/analytics/financial-health?period=${period}`),
-                    api.get(`/analytics/risk-vectors?period=${period}`),
-                    api.get("/analytics/benchmarks")
-                ]);
-
-                if (healthRes.data) {
-                    const h = healthRes.data;
-                    setMetrics([
-                        { title: "Intelligence Score", value: (h.final_score || 0).toFixed(1), trend: 2.1, status: "success", suffix: "pts" },
-                        { title: "Fraud Component", value: ((h.fraud_component || 0) * 100).toFixed(1), trend: 15.0, status: "info", suffix: "pts" },
-                        { title: "Critical Alerts", value: "3", trend: -1.0, status: "error", suffix: "" },
-                        { title: "ROI Projection", value: "1.2", trend: 5.4, status: "success", suffix: "M" },
-                    ]);
-                }
-
-                // For table data, use anomalies from network or risk
-                const anomaliesRes = await api.get("/analytics/summary");
-                const anomalies = anomaliesRes.data.anomalies || [];
-
-                setTableData(anomalies.map((a: any) => ({
-                    id: a.id || `INT-${Math.floor(Math.random() * 1000)}`,
-                    type: a.type || "Benchmark Variance",
-                    impact: a.impact || "$0.00",
-                    confidence: a.confidence || 85,
-                    period: "March 2026",
-                    action: a.recommendation || "Investigate Variance",
-                    status: "Action Required",
-                    description: a.description || "Identified outlier in financial performance compared to industry benchmarks."
-                })));
-            } catch (error) {
-                console.error("Failed to fetch intelligence data", error);
-            }
-        };
-
-        fetchIntelligence();
-    }, []);
-
-    const columns = [
-        { header: "Insight Type", accessor: "type" },
-        { header: "Financial Impact", accessor: "impact" },
-        {
-            header: "Confidence Score", accessor: "confidence", render: (val: number) => (
-                <div className="flex items-center space-x-2">
-                    <div className="w-12 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                        <div className="h-full bg-primary-brand" style={{ width: `${val}%` }} />
-                    </div>
-                    <span className="text-xs font-bold text-slate-600">{val}%</span>
-                </div>
-            )
-        },
-        { header: "Detected Period", accessor: "period" },
-        { header: "Status", accessor: "status" },
+    const insights = [
+        { id: "INT-901", type: "Benchmark Variance", impact: "$ 12,400", confidence: 92, status: "Active" },
+        { id: "INT-902", type: "Anomaly Detection", impact: "$ 4,200", confidence: 85, status: "In Review" },
+        { id: "INT-903", type: "Tax Risk Outlier", impact: "High", confidence: 78, status: "Action Required" },
     ];
 
     return (
-        <ModuleWorkspace
-            title="Financial Intelligence"
-            description="Leverage AI-driven insights to uncover hidden financial patterns. Benchmark performance against industry peers and receive proactive governance recommendations."
-            metrics={metrics}
-            tableColumns={columns}
-            tableData={tableData}
-        />
+        <div className="space-y-6">
+            <SystemActionBar
+                title="Financial Intelligence"
+                actions={[
+                    { label: "Generate Insights", icon: BrainCircuit, onClick: refresh, variant: "primary" },
+                    { label: "Industry Benchmark", icon: BarChart3, onClick: () => console.log("Benchmark...") }
+                ]}
+            />
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <MetricTile
+                    title="Intelligence Score"
+                    value={integrity.final_score.toFixed(1)}
+                    trend={2.1}
+                    status="success"
+                    suffix="pts"
+                    icon={ShieldCheck}
+                />
+                <MetricTile
+                    title="Insight Velocity"
+                    value="12"
+                    status="info"
+                    suffix="/mo"
+                    icon={TrendingUp}
+                />
+                <MetricTile
+                    title="Journal Risk"
+                    value={anomalies.journal_risk.toFixed(1)}
+                    status={anomalies.journal_risk < 40 ? "success" : "warning"}
+                    icon={Search}
+                />
+                <MetricTile
+                    title="ROI Projection"
+                    value="1.2"
+                    status="success"
+                    suffix="M"
+                    icon={Zap}
+                />
+            </div>
+
+            <div className="bg-white border border-slate-100 rounded-xl overflow-hidden shadow-sm">
+                <div className="px-4 py-3 border-b border-slate-50 bg-slate-50/30">
+                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Autonomous Insight Stream</span>
+                </div>
+                <OperationalTable
+                    data={insights}
+                    columns={[
+                        { header: "Insight Node", accessor: "type", className: "font-bold text-slate-800" },
+                        { header: "Estimated Impact", accessor: "impact" },
+                        {
+                            header: "Confidence Score",
+                            accessor: (item: any) => (
+                                <div className="flex items-center space-x-2">
+                                    <div className="w-12 h-1 bg-slate-100 rounded-full overflow-hidden">
+                                        <div
+                                            className={cn(
+                                                "h-full rounded-full",
+                                                item.confidence > 90 ? "bg-emerald-500" : item.confidence > 70 ? "bg-amber-500" : "bg-rose-500"
+                                            )}
+                                            style={{ width: `${item.confidence}%` }}
+                                        />
+                                    </div>
+                                    <span className="text-[10px] font-bold text-slate-600">{item.confidence}%</span>
+                                </div>
+                            )
+                        },
+                        {
+                            header: "Operational State",
+                            accessor: (item: any) => (
+                                <span className={cn(
+                                    "px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-tighter",
+                                    item.status === "Active" ? "bg-emerald-50 text-emerald-600" : "bg-blue-50 text-blue-600"
+                                )}>
+                                    {item.status}
+                                </span>
+                            )
+                        },
+                        {
+                            header: "Actions",
+                            accessor: () => (
+                                <button className="text-[9px] font-black text-primary-brand uppercase tracking-widest">Detailed Audit</button>
+                            ),
+                            className: "text-right"
+                        }
+                    ]}
+                />
+            </div>
+        </div>
     );
 }

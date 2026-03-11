@@ -6,7 +6,7 @@ export const setTenantContext = async (tenantId: string, tx?: any) => {
     // Set the tenant ID for the current transaction only (Transaction-Scoped)
     // This is safe for connection pooling as it doesn't persist across transactions
     const client = tx || prisma;
-    await client.$executeRawUnsafe(`SET LOCAL app.current_tenant = '${tenantId}'`);
+    await client.$executeRaw`SELECT set_config('app.current_tenant', ${tenantId}, true)`;
 };
 
 /**

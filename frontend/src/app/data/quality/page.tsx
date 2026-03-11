@@ -1,75 +1,86 @@
 "use client";
 
 import React from "react";
-import ModuleWorkspace from "../../components/dashboard/ModuleWorkspace";
+import { useSystem } from "@/context/SystemContext";
+import SystemActionBar from "@/components/enterprise/SystemActionBar";
+import MetricTile from "@/components/enterprise/MetricTile";
+import IssueTable from "@/components/enterprise/IssueTable";
+import { ShieldCheck, AlertTriangle, Database, Activity, Search } from "lucide-react";
 
 export default function QualityPage() {
-    const metrics = [
-        { title: "Quality Score", value: "96.4", trend: 0.8, status: "success" as const, suffix: "pts" },
-        { title: "Critical Issues", value: "8", trend: -12.0, status: "error" as const },
-        { title: "Monitored Fields", value: "1,420", trend: 5.0, status: "info" as const },
-        { title: "Schema Health", value: "100", trend: 0, status: "success" as const, suffix: "%" },
-    ];
+    const { governance, integrity, loading, refresh } = useSystem();
 
-    const columns = [
-        { header: "Field Name", accessor: "field" },
-        { header: "Issue Type", accessor: "type" },
-        { header: "Record Count", accessor: "count" },
-        { header: "Severity", accessor: "severity" },
-        { header: "Detected Date", accessor: "date" },
-        { header: "Status", accessor: "status" },
-    ];
+    if (loading || !integrity) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
+                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-brand"></div>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest italic">Analyzing Quality Vectors...</span>
+            </div>
+        );
+    }
 
-    const data = [
-        {
-            id: "DQ-8801",
-            field: "Vendor_Tax_ID",
-            type: "Missing Value",
-            count: "124",
-            severity: "Critical",
-            date: "Mar 06, 2026",
-            status: "Action Required",
-            description: "124 records in the Procurement module are missing essential Tax IDs. This will block automated tax validation for upcoming filings."
-        },
-        {
-            id: "DQ-8802",
-            field: "Transaction_Date",
-            type: "Invalid Format",
-            count: "12",
-            severity: "High",
-            date: "Mar 05, 2026",
-            status: "In Review",
-            description: "Detected non-ISO date formats in legacy ERP sync batch. Data requires normalization before it can be used for period-over-period variance analysis."
-        },
-        {
-            id: "DQ-8803",
-            field: "Invoice_Total",
-            type: "Duplicate Record",
-            count: "3",
-            severity: "Critical",
-            date: "Mar 06, 2026",
-            status: "Pending Action",
-            description: "High-confidence duplicate invoices detected across entity 'North America'. Values, vendors, and dates match exactly. Potential double-payment risk."
-        },
-        {
-            id: "DQ-8804",
-            field: "Currency_Code",
-            type: "Domain Violation",
-            count: "42",
-            severity: "Medium",
-            date: "Mar 04, 2026",
-            status: "Resolved",
-            description: "Unsupported currency codes detected in auxiliary ledger. Records have been automatically remapped to canonical ISO-4217 counterparts."
-        },
-    ];
+    const qualityIssues = governance.violations.filter(v =>
+        v.type.toLowerCase().includes("quality") ||
+        v.description.toLowerCase().includes("quality") ||
+        v.type.toLowerCase().includes("mismatch")
+    ).map(v => ({
+        id: v.id,
+        title: v.type,
+        severity: (v.severity === "high" ? "critical" : v.severity) as any,
+        status: v.status,
+        detectedAt: "2026-03-11"
+    }));
 
     return (
-        <ModuleWorkspace
-            title="Data Quality & Integrity"
-            description="Guarantee the precision of your financial data. Identify duplicates, validate field formats, and resolve schema mismatches."
-            metrics={metrics}
-            tableColumns={columns}
-            tableData={data}
-        />
+        <div className="space-y-6">
+            <SystemActionBar
+                title="Data Quality & Integrity"
+                actions={[
+                    { label: "Run Quality Audit", icon: ShieldCheck, onClick: refresh, variant: "primary" },
+                    { label: "Schema Validation", icon: Database, onClick: () => console.log("Schema...") }
+                ]}
+            />
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <MetricTile
+                    title="Quality Score"
+                    value={integrity.final_score.toFixed(1)}
+                    trend={0.8}
+                    status={(integrity.final_score || 0) > 90 ? "success" : "warning"}
+                    suffix="pts"
+                    icon={ShieldCheck}
+                />
+                <MetricTile
+                    title="Critical Gaps"
+                    value={qualityIssues.filter(i => i.severity === "critical").length}
+                    status={qualityIssues.filter(i => i.severity === "critical").length > 0 ? "error" : "success"}
+                    icon={AlertTriangle}
+                />
+                <MetricTile
+                    title="Monitored Fields"
+                    value="1,420"
+                    status="info"
+                    icon={Search}
+                />
+                <MetricTile
+                    title="Schema Health"
+                    value="100"
+                    status="success"
+                    suffix="%"
+                    icon={Activity}
+                />
+            </div>
+
+            <div className="bg-white border border-slate-100 rounded-xl overflow-hidden shadow-sm">
+                <div className="px-4 py-3 border-b border-slate-50 bg-slate-50/30 flex items-center justify-between">
+                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Active Quality Violations</span>
+                    <span className="px-2 py-0.5 bg-rose-50 text-rose-600 text-[9px] font-black rounded uppercase tracking-tighter">Real-time Detection</span>
+                </div>
+                <IssueTable
+                    issues={qualityIssues}
+                    onResolve={(id) => console.log("Resolving", id)}
+                />
+            </div>
+        </div>
     );
 }

@@ -9,7 +9,7 @@
  * TODO: Create src/services/integrity.service.ts and refactor once built.
  */
 
-import prisma from "../lib/prisma";
+import prisma from "../infrastructure/prisma"
 import { ExportService, ExportFormat } from "./export.service";
 import { logAuditAction } from "./audit.service";
 

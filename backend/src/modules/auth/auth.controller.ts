@@ -25,6 +25,8 @@ const SUPER_ADMIN_PERMISSIONS = [
     "manage:analytics",
     "view:users",
     "manage:users",
+    "view:system",
+    "manage:system",
 ];
 
 export class AuthController {

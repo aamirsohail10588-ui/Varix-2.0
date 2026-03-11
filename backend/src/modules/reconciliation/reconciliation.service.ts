@@ -3,72 +3,35 @@ import prisma, { withTenantContext } from "../../infrastructure/prisma";
 export class ReconciliationService {
     async autoMatchTransactions(tenantId: string) {
         return await withTenantContext(tenantId, async (tx) => {
-            // 1. Fetch unmatched bank transactions for the tenant
-            const unmatchedBankTransactions = await tx.bankTransaction.findMany({
-                where: {
-                    statement: {
-                        tenantId: tenantId,
-                    },
-                    matches: {
-                        none: {},
-                    },
-                },
-            });
+            const result = await tx.$executeRaw`
+                INSERT INTO "ReconciliationMatch" (
+                    id, "tenantId", "bankTransactionId", "ledgerEntryId", "matchType", confidence, "createdAt"
+                )
+                SELECT DISTINCT ON (bt.id)
+                    gen_random_uuid(),
+                    ${tenantId}::uuid,
+                    bt.id,
+                    le.id,
+                    'AUTO',
+                    0.95,
+                    now()
+                FROM "BankTransaction" bt
+                JOIN "BankStatement" bs ON bs.id = bt."statementId"
+                JOIN ledger_entries le ON 
+                    le.tenant_id = bs."tenantId"
+                    AND ABS((le.debit_amount - le.credit_amount) - bt.amount) < 0.01
+                    AND le.currency = bt.currency
+                    AND ABS(EXTRACT(EPOCH FROM (le.transaction_date - bt."transactionDate")) / 86400) <= 3
+                LEFT JOIN "ReconciliationMatch" rm_bt ON rm_bt."bankTransactionId" = bt.id
+                LEFT JOIN "ReconciliationMatch" rm_le ON rm_le."ledgerEntryId" = le.id
+                WHERE 
+                    bs."tenantId" = ${tenantId}::uuid
+                    AND rm_bt.id IS NULL
+                    AND rm_le.id IS NULL
+                ORDER BY bt.id, ABS(EXTRACT(EPOCH FROM (le.transaction_date - bt."transactionDate"))) ASC
+            `;
 
-            // 2. Fetch all ledger entries for the same tenant
-            const unmatchedLedgerEntries = await tx.ledgerEntry.findMany({
-                where: {
-                    tenant_id: tenantId,
-                    reconciliationMatches: {
-                        none: {},
-                    },
-                },
-            });
-
-            let matchCount = 0;
-            const matchedLedgerIds = new Set<string>();
-
-            // 3. Simple Auto-Matching Logic
-            for (const bankTx of unmatchedBankTransactions) {
-                const bankAmount = Number(bankTx.amount);
-
-                const match = unmatchedLedgerEntries.find((ledger) => {
-                    if (matchedLedgerIds.has(ledger.id)) return false;
-
-                    const ledgerAmount =
-                        Number(ledger.debit_amount) - Number(ledger.credit_amount);
-
-                    const amountMatch = Math.abs(ledgerAmount - bankAmount) < 0.01;
-                    const currencyMatch = ledger.currency === bankTx.currency;
-
-                    // Date proximity (within 3 days)
-                    const dateDiff =
-                        Math.abs(
-                            new Date(ledger.transaction_date).getTime() -
-                            new Date(bankTx.transactionDate).getTime()
-                        ) /
-                        (1000 * 60 * 60 * 24);
-                    const dateMatch = dateDiff <= 3;
-
-                    return amountMatch && currencyMatch && dateMatch;
-                });
-
-                if (match) {
-                    await tx.reconciliationMatch.create({
-                        data: {
-                            tenantId,
-                            bankTransactionId: bankTx.id,
-                            ledgerEntryId: match.id,
-                            matchType: "AUTO",
-                            confidence: 0.95,
-                        },
-                    });
-                    matchedLedgerIds.add(match.id);
-                    matchCount++;
-                }
-            }
-
-            return { matchesFound: matchCount };
+            return { matchesFound: Number(result) };
         });
     }
 

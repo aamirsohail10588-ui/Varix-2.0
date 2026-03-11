@@ -11,13 +11,10 @@ async function processCompletedSnapshots() {
         await monitoringService.checkPartitionHealth();
 
         // Find snapshots that are COMPLETED and haven't been processed by this worker yet
-        // We use the 'COMPLETED' status and a timestamp/id checkpoint
         const snapshots = await prisma.snapshot.findMany({
             where: {
                 status: "COMPLETED",
-                ...(lastProcessedSnapshotId ? {
-                    id: { not: lastProcessedSnapshotId },
-                } : {})
+                graph_processed: false
             },
             orderBy: { snapshot_timestamp: "asc" }, // Strict chronological processing
             take: 10,
@@ -57,7 +54,11 @@ async function processCompletedSnapshots() {
             // STEP 5: Graph Consistency Check
             await monitoringService.checkGraphConsistency(snapshot.id, snapshot.tenant_id);
 
-            lastProcessedSnapshotId = snapshot.id;
+            // Mark as processed centrally
+            await prisma.snapshot.update({
+                where: { id: snapshot.id },
+                data: { graph_processed: true }
+            });
         }
 
     } catch (error) {

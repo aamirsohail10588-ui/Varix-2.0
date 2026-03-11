@@ -13,7 +13,7 @@ import {
     type SyncFrequency,
     type CreateConnectorInput,
 } from "./ingestion.service";
-import { ingestionWorker } from "../../workers/ingestion.worker";
+import { ingestionQueue } from "../../infrastructure/queue";
 
 export class IngestionController {
 
@@ -66,7 +66,7 @@ export class IngestionController {
                 },
             });
 
-            await ingestionWorker.enqueue({
+            await ingestionQueue.add("process-ingestion", {
                 batchId: batch.id,
                 tenantId,
                 filePath: req.file.path,
@@ -95,6 +95,29 @@ export class IngestionController {
             }
 
             res.json(batch);
+        } catch (error: unknown) {
+            const message = error instanceof Error ? error.message : "Unknown error";
+            res.status(500).json({ error: message });
+        }
+    }
+
+    async getHistory(req: Request, res: Response): Promise<void> {
+        try {
+            const tenantId = (req as any).tenantId || req.headers["x-tenant-id"];
+            const history = await ingestionService.getHistory(tenantId as string);
+            res.json(history);
+        } catch (error: unknown) {
+            const message = error instanceof Error ? error.message : "Unknown error";
+            res.status(500).json({ error: message });
+        }
+    }
+
+    async getRecent(req: Request, res: Response): Promise<void> {
+        try {
+            const tenantId = (req as any).tenantId || req.headers["x-tenant-id"];
+            const limit = parseInt(req.query.limit as string || "10", 10);
+            const recent = await ingestionService.getRecent(tenantId as string, limit);
+            res.json(recent);
         } catch (error: unknown) {
             const message = error instanceof Error ? error.message : "Unknown error";
             res.status(500).json({ error: message });

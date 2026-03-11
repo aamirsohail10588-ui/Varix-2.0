@@ -8,7 +8,7 @@
  * Replaced with ingestionService.normalizeToLedgerEntries which is
  * the correct method to hand off a batch to the normalization worker.
  */
-import prisma from "../lib/prisma";
+import prisma from "../infrastructure/prisma";
 import { ingestionService } from "../modules/ingestion/ingestion.service";
 import { logAuditAction } from "./audit.service";
 import type { Prisma } from "@prisma/client";

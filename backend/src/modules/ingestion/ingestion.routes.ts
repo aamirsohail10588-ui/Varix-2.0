@@ -24,6 +24,8 @@ const router = Router();
 
 router.post("/upload", authenticateToken, requireTenant, upload.single("file"), ingestionController.upload);
 router.get("/batch/:batchId/status", authenticateToken, requireTenant, ingestionController.getStatus);
+router.get("/history", authenticateToken, requireTenant, ingestionController.getHistory);
+router.get("/recent", authenticateToken, requireTenant, ingestionController.getRecent);
 
 // Simulation / Test Import
 router.post("/import-test", authenticateToken, requireTenant, upload.single("file"), simulationController.importTestDataset);
