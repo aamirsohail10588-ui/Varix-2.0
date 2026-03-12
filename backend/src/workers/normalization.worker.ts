@@ -20,6 +20,16 @@
 
 import prisma from "../infrastructure/prisma";
 import { monitoringService } from "../modules/system/monitoring.service";
+import { ConditioningService } from "../modules/governance/conditioning.service";
+import { LineageService } from "../modules/governance/lineage.service";
+import { ConsolidationService } from "../modules/ledger/consolidation.service";
+import { GAAPComplianceService } from "../modules/ledger/gaap.service";
+import { PeriodService } from "../modules/accounting/period.service";
+import { IntegrityService } from "../modules/governance/integrity.service";
+import { TaxService } from "../modules/tax/tax.service";
+import { GovernanceService } from "../modules/governance/governance.service";
+import { AnomalyService } from "../modules/intelligence/anomaly.service";
+import { VarianceService } from "../modules/intelligence/variance.service";
 
 // ─────────────────────────────────────────────
 // CONSTANTS
@@ -208,73 +218,226 @@ async function processSnapshot(snapshotId: string): Promise<void> {
             console.log(`[NormalizationWorker] Snapshot ${snapshotId} EXCEEDS window threshold. Using chunked processing...`);
             let offset = 0;
             while (offset < recordCount) {
-                const rowCount = await prisma.$executeRawUnsafe(`
-                        INSERT INTO ledger_entries (
-                            id, tenant_id, transaction_date, posting_period, account_id,
-                            debit_amount, credit_amount, currency, source_system,
-                            snapshot_id, confidence_score, ingestion_batch_id, source_id, "createdAt"
-                        )
-                        SELECT
-                            gen_random_uuid(),
-                            s.tenant_id,
-                            (COALESCE(r.payload_json->>'transaction_date', r.payload_json->>'date', r.payload_json->>'Date', now()::text))::timestamp,
-                            'OPEN',
-                            COALESCE(a.id, $1),
-                            (COALESCE(r.payload_json->>'debit', r.payload_json->>'Debit', '0'))::numeric,
-                            (COALESCE(r.payload_json->>'credit', r.payload_json->>'Credit', '0'))::numeric,
-                            UPPER(COALESCE(r.payload_json->>'currency', r.payload_json->>'Currency', 'USD')),
-                            COALESCE(r.payload_json->>'source_system', 'INGESTION_PIPELINE'),
-                            r."snapshotId",
-                            (COALESCE(r.payload_json->>'confidence_score', '100'))::integer,
-                            r.batch_id,
-                            COALESCE(r.payload_json->>'transaction_id', r.payload_json->>'voucher_number', r.payload_json->>'invoice_number', ''),
-                            now()
-                        FROM (
-                            SELECT * FROM raw_records 
-                            WHERE "snapshotId" = $2 
-                            LIMIT ${CHUNK_WINDOW_SIZE} OFFSET ${offset}
-                        ) r
-                        JOIN snapshots s ON r."snapshotId" = s.id
-                        LEFT JOIN accounts a ON a.tenant_id = s.tenant_id 
-                            AND UPPER(TRIM(a.code)) = UPPER(TRIM(COALESCE(r.payload_json->>'account_code', r.payload_json->>'account', r.payload_json->>'Account', 'UNMAPPED')))
-                        ON CONFLICT DO NOTHING;
-                    `, unmappedAccountId, snapshotId);
+                const rawRecords = await prisma.rawRecord.findMany({
+                    where: { snapshotId },
+                    take: CHUNK_SIZE,
+                    skip: offset
+                });
 
-                processedCount += Number(rowCount);
-                offset += CHUNK_WINDOW_SIZE;
-                console.log(`[NormalizationWorker] Snapshot ${snapshotId}: window finished. Progress: ${processedCount.toLocaleString()}/${recordCount.toLocaleString()}`);
+                const ledgerEntries: any[] = [];
+                for (const r of rawRecords) {
+                    const result = await ConditioningService.conditionLedgerEntry(
+                        tenantId,
+                        r.payload_json,
+                        r.payload_json ? (r.payload_json as any).source_system : "INGESTION",
+                        snapshotId
+                    );
+
+                    // GAAP Validation
+                    const gaapErrors = GAAPComplianceService.validateEntry(result.finalValue);
+                    if (gaapErrors.length > 0) {
+                        result.fixes.push(...gaapErrors.map(e => `GAAP_WARN_${e}`));
+                        result.confidenceScore -= 10;
+                    }
+
+                    // Period Lock Check
+                    const isLocked = await PeriodService.isPeriodLocked(tenantId, extractDate(result.finalValue));
+                    if (isLocked) {
+                        result.fixes.push("ERR_PERIOD_LOCKED");
+                        result.confidenceScore = 0; // Fail the record
+                    }
+
+                    // Tax Compliance Check
+                    const { isCompliant, variance } = await TaxService.validateTaxPosting(tenantId, result.finalValue);
+                    if (!isCompliant) {
+                        result.fixes.push(`TAX_VARIANCE_${variance.toFixed(2)}`);
+                        result.confidenceScore -= 15;
+                    }
+
+                    // Threshold-Based Governance Control
+                    const entryAmount = Math.max(parseFloat(result.finalValue.debit_amount), parseFloat(result.finalValue.credit_amount));
+                    const THRESHOLD = 10000; // Hardcoded $10k threshold for prototype
+
+                    if (entryAmount >= THRESHOLD) {
+                        result.fixes.push("PENDING_APPROVAL_THRESHOLD");
+                        // In a real system, we'd look up the active workflow for the tenant
+                        // For prototype, we'll flag it for approval processing
+                    }
+
+                    // Real-time Anomaly Detection
+                    const tempEntry = {
+                        tenant_id: tenantId,
+                        account_id: result.finalValue.account_id,
+                        debit_amount: result.finalValue.debit_amount,
+                        credit_amount: result.finalValue.credit_amount,
+                        transaction_date: extractDate(result.finalValue)
+                    };
+
+                    const anomalyAlert = await AnomalyService.scoreEntry(tempEntry);
+                    if (anomalyAlert && (anomalyAlert as any).severity !== "LOW") {
+                        result.fixes.push(`ANOMALY_DETECTED_${(anomalyAlert as any).severity}`);
+                        result.confidenceScore -= 20;
+                    }
+
+                    // Budget Variance Check (Layer 14 Integration)
+                    const fiscalYear = new Date().getFullYear(); // Simplified for prototype
+                    const varianceReport = await VarianceService.calculateVariance(
+                        tenantId,
+                        fiscalYear,
+                        result.finalValue.account_id
+                    );
+
+                    if (varianceReport && varianceReport.variancePercentage < -20) {
+                        result.fixes.push(`BUDGET_OVERRUN_${Math.abs(Math.round(varianceReport.variancePercentage))}%`);
+                        result.confidenceScore -= 15;
+                    }
+
+                    // Multi-Currency Consolidation
+                    const baseAmount = await ConsolidationService.convertToBaseCurrency(
+                        tenantId,
+                        parseFloat(result.finalValue.debit_amount) - parseFloat(result.finalValue.credit_amount),
+                        result.finalValue.currency,
+                        result.finalValue.transaction_date || new Date()
+                    );
+
+                    const entryData = {
+                        id: r.id,
+                        tenant_id: tenantId,
+                        transaction_date: extractDate(result.finalValue),
+                        posting_period: "OPEN",
+                        account_id: result.finalValue.account_id,
+                        debit_amount: result.finalValue.debit_amount,
+                        credit_amount: result.finalValue.credit_amount,
+                        currency: result.finalValue.currency,
+                        source_system: result.finalValue.source_system || "INGESTION_PIPELINE",
+                        snapshot_id: snapshotId,
+                        confidence_score: result.confidenceScore,
+                        ingestion_batch_id: batchId,
+                        source_id: extractSourceId(result.finalValue),
+                        base_currency_amount: baseAmount,
+                        tax_code: result.finalValue.tax_code || null,
+                        tax_amount: result.finalValue.tax_amount || 0,
+                        createdAt: new Date()
+                    };
+
+                    const provenanceHash = LineageService.generateHash(entryData);
+
+                    ledgerEntries.push({
+                        ...entryData,
+                        provenance_hash: provenanceHash
+                    });
+
+                    // Record lineage trail
+                    await LineageService.recordTrail(
+                        tenantId,
+                        "LedgerEntry",
+                        r.id,
+                        "RawRecord",
+                        r.id,
+                        result.fixes.length > 0 ? "CONDITIONED" : "DIRECT_NORMALIZATION"
+                    );
+
+                    // Log fixes if any
+                    if (result.fixes.length > 0) {
+                        await ConditioningService.logConditioning(
+                            tenantId,
+                            "LedgerEntry",
+                            r.id,
+                            r.payload_json,
+                            result.fixes,
+                            0, // Log delta if calculated
+                            snapshotId
+                        );
+                    }
+                }
+
+                await prisma.ledgerEntry.createMany({
+                    data: ledgerEntries,
+                    skipDuplicates: true
+                });
+
+                processedCount += rawRecords.length;
+                offset += CHUNK_SIZE;
+                console.log(`[NormalizationWorker] Snapshot ${snapshotId}: chunk finished. Progress: ${processedCount.toLocaleString()}/${recordCount.toLocaleString()}`);
             }
         } else {
-            const rowCount = await prisma.$executeRawUnsafe(`
-                    INSERT INTO ledger_entries (
-                        id, tenant_id, transaction_date, posting_period, account_id,
-                        debit_amount, credit_amount, currency, source_system,
-                        snapshot_id, confidence_score, ingestion_batch_id, source_id, "createdAt"
-                    )
-                    SELECT
-                        gen_random_uuid(),
-                        s.tenant_id,
-                        (COALESCE(r.payload_json->>'transaction_date', r.payload_json->>'date', r.payload_json->>'Date', now()::text))::timestamp,
-                        'OPEN',
-                        COALESCE(a.id, $1),
-                        (COALESCE(r.payload_json->>'debit', r.payload_json->>'Debit', '0'))::numeric,
-                        (COALESCE(r.payload_json->>'credit', r.payload_json->>'Credit', '0'))::numeric,
-                        UPPER(COALESCE(r.payload_json->>'currency', r.payload_json->>'Currency', 'USD')),
-                        COALESCE(r.payload_json->>'source_system', 'INGESTION_PIPELINE'),
-                        r."snapshotId",
-                        (COALESCE(r.payload_json->>'confidence_score', '100'))::integer,
-                        r.batch_id,
-                        COALESCE(r.payload_json->>'transaction_id', r.payload_json->>'voucher_number', r.payload_json->>'invoice_number', ''),
-                        now()
-                    FROM raw_records r
-                    JOIN snapshots s ON r."snapshotId" = s.id
-                    LEFT JOIN accounts a ON a.tenant_id = s.tenant_id 
-                        AND UPPER(TRIM(a.code)) = UPPER(TRIM(COALESCE(r.payload_json->>'account_code', r.payload_json->>'account', r.payload_json->>'Account', 'UNMAPPED')))
-                    WHERE r."snapshotId" = $2
-                    ON CONFLICT DO NOTHING;
-                `, unmappedAccountId, snapshotId);
-            processedCount = Number(rowCount);
+            // Smaller snapshots also use the Node-based conditioning for full metadata precision
+            let offset = 0;
+            while (offset < recordCount) {
+                const rawRecords = await prisma.rawRecord.findMany({
+                    where: { snapshotId },
+                    take: CHUNK_SIZE,
+                    skip: offset
+                });
+
+                if (rawRecords.length === 0) break;
+
+                const ledgerEntries: any[] = [];
+                for (const r of rawRecords) {
+                    const result = await ConditioningService.conditionLedgerEntry(
+                        tenantId,
+                        r.payload_json,
+                        r.payload_json ? (r.payload_json as any).source_system : "INGESTION",
+                        snapshotId
+                    );
+
+                    ledgerEntries.push({
+                        tenant_id: tenantId,
+                        transaction_date: extractDate(result.finalValue),
+                        posting_period: "OPEN",
+                        account_id: result.finalValue.account_id,
+                        debit_amount: result.finalValue.debit_amount,
+                        credit_amount: result.finalValue.credit_amount,
+                        currency: result.finalValue.currency,
+                        source_system: result.finalValue.source_system || "INGESTION_PIPELINE",
+                        snapshot_id: snapshotId,
+                        confidence_score: result.confidenceScore,
+                        ingestion_batch_id: batchId,
+                        source_id: extractSourceId(result.finalValue),
+                        createdAt: new Date()
+                    });
+
+                    if (result.fixes.length > 0) {
+                        await ConditioningService.logConditioning(
+                            tenantId,
+                            "LedgerEntry",
+                            r.id,
+                            r.payload_json,
+                            result.fixes,
+                            0,
+                            snapshotId
+                        );
+                    }
+                }
+
+                await prisma.ledgerEntry.createMany({
+                    data: ledgerEntries,
+                    skipDuplicates: true
+                });
+
+                processedCount += rawRecords.length;
+                offset += CHUNK_SIZE;
+            }
         }
+
+        // Step 5: Integrity Validation & Sealing
+        const { isValid, imbalance } = await IntegrityService.validateDoubleEntry(batchId);
+
+        if (!isValid) {
+            console.error(`[NormalizationWorker] Snapshot ${snapshotId} FAILED integrity check: Imbalance of ${imbalance}`);
+            await (prisma.snapshot as any).update({
+                where: { id: snapshotId },
+                data: {
+                    status: "FAILED",
+                    error_message: `Integrity Failure: Batch ${batchId} is unbalanced by ${imbalance}`
+                }
+            });
+            return;
+        }
+
+        // Generate Integrity Seal
+        await IntegrityService.generateBatchSeal(tenantId, batchId);
+        console.log(`[NormalizationWorker] Snapshot ${snapshotId} SEALED successfully.`);
 
         // Mark batch and snapshot completed
         await prisma.ingestionBatch.update({

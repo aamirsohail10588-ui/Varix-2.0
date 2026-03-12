@@ -1,6 +1,5 @@
 import { Worker } from "bullmq";
 import IORedis from "ioredis";
-import prisma from "../infrastructure/prisma";
 import { ingestionService } from "../modules/ingestion/ingestion.service";
 import { csvIngestionPipeline } from "../pipelines/csvIngestion.pipeline";
 import { ingestionQueue } from "../infrastructure/queue";
@@ -15,57 +14,42 @@ const connection = new IORedis(
 const worker = new Worker(
     "ingestion",
     async (job) => {
-
         const { batchId, tenantId, filePath, fileType } = job.data;
 
         console.log(`[IngestionWorker] Processing Batch ${batchId}`);
 
         try {
-
-            await prisma.ingestionBatch.update({
-                where: { id: batchId },
-                data: { status: "processing" }
-            });
+            // State: VALIDATING is handled inside the pipeline or process methods
 
             if (fileType === "CSV") {
-
-                await ingestionQueue.add("ingest-csv", {
+                // For extreme scale, the pipeline handles everything
+                await csvIngestionPipeline.processExtremeScale(
                     filePath,
                     tenantId,
-                    batchId,
-                    fileType: "CSV"
-                });
-
+                    batchId
+                );
             } else {
-
+                // For Excel, we use the service
+                await ingestionService.transitionState(batchId, "VALIDATING");
                 await ingestionService.processExcel(
                     filePath,
                     tenantId,
                     batchId
                 );
-
+                await ingestionService.transitionState(batchId, "COMMITTED");
             }
 
-            await prisma.ingestionBatch.update({
-                where: { id: batchId },
-                data: { status: "completed" }
-            });
-
             console.log(`[IngestionWorker] Batch ${batchId} SUCCESS`);
-
         } catch (error) {
-
             console.error(`[IngestionWorker] Batch ${batchId} FAILED`, error);
-
-            await prisma.ingestionBatch.update({
-                where: { id: batchId },
-                data: { status: "failed" }
-            });
-
+            // Failure is handled in catch blocks of called methods usually, 
+            // but we ensure it's marked failed here if it wasn't.
+            await ingestionService.transitionState(batchId, "FAILED", {
+                error: error instanceof Error ? error.message : "Background job failed"
+            }).catch(() => { });
         }
-
     },
-    { connection }
+    { connection: connection as any }
 );
 
 worker.on("completed", (job) => {

@@ -10,6 +10,7 @@ import cron from "node-cron";
 
 import authRoutes from "./modules/auth/auth.routes";
 import ingestionRoutes from "./modules/ingestion/ingestion.routes";
+import sourcesRoutes from "./modules/sources/sources.routes";
 import analyticsRoutes from "./modules/analytics/analytics.routes";
 import governanceRoutes from "./modules/governance/governance.routes";
 import accountingRoutes from "./modules/accounting/accounting.routes";
@@ -46,6 +47,7 @@ app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 // Domain Modules
 app.use("/api/auth", authRoutes);
 app.use("/api/ingestion", ingestionRoutes);
+app.use("/api/sources", sourcesRoutes);
 app.use("/api/analytics", analyticsRoutes);
 app.use("/api/governance", governanceRoutes);
 app.use("/api/accounting", accountingRoutes);

@@ -56,7 +56,7 @@ export class IngestionController {
                     tenant_id: tenantId,
                     source_type: fileType,
                     file_name: fileName,
-                    status: "pending",
+                    status: "RECEIVED",
                     files: {
                         create: {
                             file_path: req.file.path,

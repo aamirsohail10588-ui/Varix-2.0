@@ -21,6 +21,8 @@ import * as xlsx from "xlsx";
 import prisma from "../../infrastructure/prisma";
 import { csvIngestionPipeline } from "../../pipelines/csvIngestion.pipeline";
 import type { Prisma } from "@prisma/client";
+import { ValidationService } from "./validation.service";
+import { DLQService } from "./dlq.service";
 
 // ─────────────────────────────────────────────
 // TYPES
@@ -41,10 +43,12 @@ export type SyncFrequency =
     | "MANUAL";
 
 export type BatchStatus =
-    | "pending"
-    | "processing"
-    | "completed"
-    | "failed";
+    | "RECEIVED"
+    | "VALIDATING"
+    | "STAGED"
+    | "NORMALIZED"
+    | "COMMITTED"
+    | "FAILED";
 
 export interface ConnectorConfig {
     access_token?: string;
@@ -137,6 +141,19 @@ export class IngestionService {
                 throw new Error("Excel sheet is empty.");
             }
 
+            await this.transitionState(batchId, "VALIDATING");
+
+            const validationResult = ValidationService.validateRawRecords(rows as unknown as RawPayloadRow[]);
+
+            if (!validationResult.isValid) {
+                // Log issues but proceed if possible, or move specifically failed to DLQ
+                // For this protocol, we'll staged them as FAILED if any critical schema issue
+                await this.markBatchFailed(batchId, new Error(`Schema validation failed: ${validationResult.errors[0]}`));
+                return { success: false, batchId, recordCount: rows.length };
+            }
+
+            await this.transitionState(batchId, "STAGED");
+
             await prisma.rawRecord.createMany({
                 data: rows.map((row) => ({
                     batch_id: batchId,
@@ -148,11 +165,14 @@ export class IngestionService {
                 where: { id: batchId },
                 data: {
                     record_count: rows.length,
-                    status: "processing",
                 },
             });
 
+            await this.transitionState(batchId, "NORMALIZED");
+
             const snapshotId = await this.normalizeToLedgerEntries(tenantId, batchId);
+
+            await this.transitionState(batchId, "COMMITTED");
 
             return {
                 success: true,
@@ -343,6 +363,26 @@ export class IngestionService {
 
     // ── PRIVATE UTILITIES ─────────────────────────
 
+    async transitionState(
+        batchId: string,
+        nextStatus: BatchStatus,
+        details?: any
+    ): Promise<void> {
+        await prisma.ingestionBatch.update({
+            where: { id: batchId },
+            data: { status: nextStatus },
+        });
+
+        await prisma.auditLog.create({
+            data: {
+                action: "BATCH_STATE_TRANSITION",
+                entityType: "IngestionBatch",
+                entityId: batchId,
+                details: { nextStatus, ...details },
+            },
+        });
+    }
+
     private async markBatchFailed(
         batchId: string,
         error: unknown
@@ -350,17 +390,7 @@ export class IngestionService {
         const message =
             error instanceof Error ? error.message : "Unknown error";
 
-        await prisma.ingestionBatch
-            .update({
-                where: { id: batchId },
-                data: { status: "failed" },
-            })
-            .catch((updateError: unknown) => {
-                console.error(
-                    `[IngestionService] Failed to mark batch ${batchId} as failed. Original error: ${message}. Update error:`,
-                    updateError
-                );
-            });
+        await this.transitionState(batchId, "FAILED", { error: message });
     }
 
     private safeDeleteFile(filePath: string): void {

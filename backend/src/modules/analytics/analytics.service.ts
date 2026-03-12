@@ -100,37 +100,78 @@ export class AnalyticsService {
     }
 
     async calculateFHI(tenantId: string, period: string) {
-        const WEIGHTS = { INTEGRITY: 0.35, CLOSE_RISK: 0.20, JOURNAL_RISK: 0.20, EVIDENCE: 0.15, FRAUD: 0.10 };
+        const WEIGHTS = {
+            INTEGRITY: 0.20,
+            GOVERNANCE: 0.20,
+            STABILITY: 0.30,
+            PERFORMANCE: 0.30
+        };
 
+        // 1. Data Integrity (20%)
         const integrityData = await this.calculateIntegrityScore(tenantId);
         const integrity_component = integrityData.score;
 
-        const risk = await prisma.riskMetric.findUnique({
-            where: { tenant_id_period: { tenant_id: tenantId, period } }
+        // 2. Governance Compliance (20%)
+        // Percentage of approved requests vs total requests for the period
+        const totalRequests = await (prisma as any).approvalRequest.count({
+            where: { tenantId, createdAt: { gte: new Date(`${period.split('-')[0]}-01-01`) } }
+        });
+        const approvedRequests = await (prisma as any).approvalRequest.count({
+            where: { tenantId, status: "APPROVED", createdAt: { gte: new Date(`${period.split('-')[0]}-01-01`) } }
+        });
+        const governance_component = totalRequests === 0 ? 100 : (approvedRequests / totalRequests) * 100;
+
+        // 3. Financial Stability (30%)
+        // Simplified Current Ratio: Asset accounts vs Liability accounts
+        const assetAccounts = await prisma.account.findMany({
+            where: { tenantId, type: "ASSET" },
+            select: { id: true }
+        });
+        const liabilityAccounts = await prisma.account.findMany({
+            where: { tenantId, type: "LIABILITY" },
+            select: { id: true }
         });
 
-        const close_risk_index = risk?.close_risk || 0;
-        const journal_risk_index = risk?.journal_risk || 0;
-        const fraud_risk_score = risk?.tax_risk || 0;
-        const evidence_component = integrityData.evidence_coverage_ratio;
+        const assetIds = assetAccounts.map(a => a.id);
+        const liabilityIds = liabilityAccounts.map(a => a.id);
+
+        const assets = await prisma.ledgerEntry.aggregate({
+            _sum: { debit_amount: true, credit_amount: true },
+            where: { tenant_id: tenantId, account_id: { in: assetIds } }
+        });
+        const liabilities = await prisma.ledgerEntry.aggregate({
+            _sum: { debit_amount: true, credit_amount: true },
+            where: { tenant_id: tenantId, account_id: { in: liabilityIds } }
+        });
+
+        const assetTotal = Math.max(0, parseFloat(assets._sum.debit_amount?.toString() || "0") - parseFloat(assets._sum.credit_amount?.toString() || "0"));
+        const liabilityTotal = Math.max(0, parseFloat(liabilities._sum.credit_amount?.toString() || "0") - parseFloat(liabilities._sum.debit_amount?.toString() || "0"));
+
+        const stability_component = liabilityTotal === 0 ? 100 : Math.min(100, (assetTotal / liabilityTotal) * 50); // Scale 2.0 ratio to 100
+
+        // 4. FP&A Performance (30%)
+        // Accuracy of actuals vs budget
+        const { VarianceService } = await import("../intelligence/variance.service");
+        const reports = await VarianceService.getFullReport(tenantId, parseInt(period.split('-')[0]));
+        let totalVarianceAcc = 0;
+        reports.forEach(r => totalVarianceAcc += Math.abs(r.variancePercentage));
+        const avgVariance = reports.length === 0 ? 0 : totalVarianceAcc / reports.length;
+        const performance_component = Math.max(0, 100 - avgVariance);
 
         const final_score = (
             (integrity_component * WEIGHTS.INTEGRITY) +
-            ((100 - close_risk_index) * WEIGHTS.CLOSE_RISK) +
-            ((100 - journal_risk_index) * WEIGHTS.JOURNAL_RISK) +
-            (evidence_component * WEIGHTS.EVIDENCE) +
-            ((100 - fraud_risk_score) * WEIGHTS.FRAUD)
+            (governance_component * WEIGHTS.GOVERNANCE) +
+            (stability_component * WEIGHTS.STABILITY) +
+            (performance_component * WEIGHTS.PERFORMANCE)
         );
 
-        return prisma.financialHealthIndex.upsert({
+        return (prisma as any).financialHealthIndex.upsert({
             where: { tenant_id_period: { tenant_id: tenantId, period } },
             update: {
                 integrity_component,
-                close_component: Math.max(0, 100 - close_risk_index),
-                control_component: Math.max(0, 100 - journal_risk_index),
-                change_risk_component: Math.max(0, 100 - (risk?.override_risk || 0)),
-                fraud_component: Math.max(0, 100 - fraud_risk_score),
-                evidence_component,
+                governance_component,
+                stability_component,
+                performance_component,
                 final_score,
                 calculated_at: new Date()
             },
@@ -138,11 +179,9 @@ export class AnalyticsService {
                 tenant_id: tenantId,
                 period,
                 integrity_component,
-                close_component: Math.max(0, 100 - close_risk_index),
-                control_component: Math.max(0, 100 - journal_risk_index),
-                change_risk_component: Math.max(0, 100 - (risk?.override_risk || 0)),
-                fraud_component: Math.max(0, 100 - fraud_risk_score),
-                evidence_component,
+                governance_component,
+                stability_component,
+                performance_component,
                 final_score
             }
         });

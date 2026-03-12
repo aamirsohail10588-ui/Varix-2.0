@@ -1,0 +1,27 @@
+[REJECTION] PrismaClientKnownRequestError: 
+Invalid `prisma.jobDefinition.findMany()` invocation in
+C:\Users\Aamir Sohail\Desktop\VARIX 2.0\backend\src\modules\orchestration\scheduler.service.ts:25:56
+
+  22 static async pollAndTrigger() {
+  23     const now = new Date();
+  24 
+→ 25     const pendingJobs = await prisma.jobDefinition.findMany(
+The table `public.job_definitions` does not exist in the current database.
+[REJECTION] PrismaClientKnownRequestError: 
+Invalid `prisma.jobDefinition.findMany()` invocation in
+C:\Users\Aamir Sohail\Desktop\VARIX 2.0\backend\src\modules\orchestration\scheduler.service.ts:25:56
+
+  22 static async pollAndTrigger() {
+  23     const now = new Date();
+  24 
+→ 25     const pendingJobs = await prisma.jobDefinition.findMany(
+The table `public.job_definitions` does not exist in the current database.
+[REJECTION] PrismaClientKnownRequestError: 
+Invalid `prisma.jobDefinition.findMany()` invocation in
+C:\Users\Aamir Sohail\Desktop\VARIX 2.0\backend\src\modules\orchestration\scheduler.service.ts:25:56
+
+  22 static async pollAndTrigger() {
+  23     const now = new Date();
+  24 
+→ 25     const pendingJobs = await prisma.jobDefinition.findMany(
+The table `public.job_definitions` does not exist in the current database.

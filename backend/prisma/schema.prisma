@@ -56,6 +56,20 @@ model Tenant {
   bankAccounts              BankAccount[]
   bankStatements            BankStatement[]
   reconciliationMatches     ReconciliationMatch[]
+  reconciliationSessions    ReconciliationSession[]
+  workflowRuns              WorkflowRun[]
+  jobDefinitions            JobDefinition[]
+  schemaRegistries          SchemaRegistry[]
+  accountMaps               AccountMap[]
+  conditioningLogs          ConditioningLog[]
+  lineageTrails             LineageTrail[]
+  periodLocks               PeriodLock[]
+  integritySeals            IntegritySeal[]
+  taxJurisdictions          TaxJurisdiction[]
+  approvalWorkflows         ApprovalWorkflow[]
+  approvalRequests          ApprovalRequest[]
+  anomalyAlerts             AnomalyAlert[]
+  investigations            Investigation[]
 }
 
 model User {
@@ -77,6 +91,11 @@ model User {
   evidenceDocuments EvidenceDocument[]
   ingestionBatches  IngestionBatch[]
   sessions          Session[]
+  periodLocks       PeriodLock[] @relation("PeriodLockedBy")
+  integritySeals    IntegritySeal[] @relation("SealedBy")
+  approvalRequests  ApprovalRequest[] @relation("RequestedBy")
+  approvalSteps     ApprovalStep[] @relation("Approver")
+  investigations    Investigation[] @relation("InvestigationAssignee")
 }
 
 model Role {
@@ -178,6 +197,8 @@ model Account {
   updatedAt DateTime      @updatedAt
   tenant    Tenant        @relation(fields: [tenantId], references: [id])
   entries   LedgerEntry[]
+  accountMaps AccountMap[]
+  budgetItems BudgetItem[]
 
   @@unique([tenantId, code])
 }
@@ -186,22 +207,30 @@ model LedgerEntry {
   id                 String   @id @default(uuid())
   tenant_id          String
   transaction_date   DateTime
-  posting_period     String   @default("OPEN")
+  posting_period     String?  @default("OPEN")
   account_id         String
   debit_amount       Decimal  @default(0.0) @db.Decimal(19, 4)
   credit_amount      Decimal  @default(0.0) @db.Decimal(19, 4)
-  currency           String   @default("USD")
+  currency           String?  @default("USD")
+  base_currency_amount Decimal? @default(0.0) @db.Decimal(19, 4)
   source_system      String?
   snapshot_id        String?
   createdAt          DateTime @default(now())
-  confidence_score   Int      @default(100)
+  confidence_score   Int?     @default(100)
   ingestion_batch_id String?
   raw_record_id      String?
   source_id          String?
+  provenance_hash    String?   // SHA-256 for immutability proof
+  tax_code           String?
+  tax_amount         Decimal?  @default(0.0) @db.Decimal(19, 4)
+  tax_rate_id        String?
   account            Account  @relation(fields: [account_id], references: [id])
   tenant             Tenant   @relation(fields: [tenant_id], references: [id])
   snapshot           Snapshot? @relation(fields: [snapshot_id], references: [id])
   reconciliationMatches ReconciliationMatch[]
+  approvalRequests   ApprovalRequest[]
+  evidenceDocuments  EvidenceDocument[]
+  anomalyAlerts      AnomalyAlert[]
 
   @@index([tenant_id])
   @@index([tenant_id, transaction_date])
@@ -327,8 +356,11 @@ model Snapshot {
   graph_processed    Boolean            @default(false)
   batch              IngestionBatch     @relation(fields: [batch_id], references: [id])
   tenant             Tenant             @relation(fields: [tenant_id], references: [id])
+  error_message      String?
 
   ledgerEntries      LedgerEntry[]
+  evidenceDocuments  EvidenceDocument[]
+  approvalRequests   ApprovalRequest[]
 
   @@map("snapshots")
 }
@@ -339,6 +371,7 @@ model RawRecord {
   payload_json     Json
   snapshotId       String?
   validationErrors Json?
+  lineage_hash     String?  // SHA-256 for source integrity
   batch            IngestionBatch @relation(fields: [batch_id], references: [id], onDelete: Cascade)
   snapshot         Snapshot?      @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
 
@@ -734,19 +767,7 @@ model VendorCompliance {
   @@map("vendor_compliance")
 }
 
-model Budget {
-  id        String   @id @default(uuid())
-  tenantId  String
-  name      String
-  version   String
-  period    String
-  amount    Decimal  @db.Decimal(19, 4)
-  status    String   @default("DRAFT")
-  createdAt DateTime @default(now())
-  tenant    Tenant   @relation(fields: [tenantId], references: [id])
 
-  @@map("budgets")
-}
 
 model ForecastVersion {
   id        String   @id @default(uuid())
@@ -779,11 +800,9 @@ model FinancialHealthIndex {
   tenant_id             String
   period                String
   integrity_component   Float    @default(0.0)
-  close_component       Float    @default(0.0)
-  control_component     Float    @default(0.0)
-  change_risk_component Float    @default(0.0)
-  fraud_component       Float    @default(0.0)
-  evidence_component    Float    @default(0.0)
+  governance_component  Float    @default(0.0)
+  stability_component   Float    @default(0.0)
+  performance_component Float    @default(0.0)
   final_score           Float    @default(0.0)
   calculated_at         DateTime @default(now())
   tenant                Tenant   @relation(fields: [tenant_id], references: [id])
@@ -851,20 +870,41 @@ model BankTransaction {
   @@index([transactionDate])
 }
 
+model ReconciliationSession {
+  id            String   @id @default(uuid())
+  tenantId      String
+  status        String   @default("OPEN") // OPEN, COMMITTED, REJECTED
+  period        String?
+  source        String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  tenant        Tenant   @relation(fields: [tenantId], references: [id])
+  matches       ReconciliationMatch[]
+
+  @@index([tenantId])
+  @@map("reconciliation_sessions")
+}
+
 model ReconciliationMatch {
   id                String   @id @default(uuid())
   tenantId          String
+  sessionId         String?
   bankTransactionId String
   ledgerEntryId     String
   matchType         String
   confidence        Float
+  rules_meta        Json?
   createdAt         DateTime @default(now())
 
   tenant            Tenant         @relation(fields: [tenantId], references: [id])
+  session           ReconciliationSession? @relation(fields: [sessionId], references: [id])
   bankTransaction   BankTransaction @relation(fields: [bankTransactionId], references: [id])
   ledgerEntry       LedgerEntry     @relation(fields: [ledgerEntryId], references: [id])
 
   @@index([tenantId])
+  @@index([sessionId])
+  @@map("reconciliation_matches")
 }
 
 model NetworkMetric {
@@ -883,18 +923,343 @@ model NetworkMetric {
   @@map("network_metrics")
 }
 
-model EvidenceDocument {
+
+
+model WorkflowRun {
+  id           String         @id @default(uuid())
+  tenant_id    String
+  workflow_name String
+  status       String         @default("PENDING")
+  started_at   DateTime?
+  completed_at DateTime?
+  error_message String?
+  metadata     Json?
+  created_at   DateTime       @default(now())
+  updated_at   DateTime       @updatedAt
+  tenant       Tenant         @relation(fields: [tenant_id], references: [id])
+  tasks        WorkflowTask[]
+
+  @@map("workflow_runs")
+}
+
+model WorkflowTask {
+  id              String                   @id @default(uuid())
+  run_id          String
+  task_name       String
+  task_type       String
+  status          String                   @default("PENDING")
+  started_at      DateTime?
+  completed_at    DateTime?
+  retry_count     Int                      @default(0)
+  max_retries     Int                      @default(3)
+  error_message   String?
+  input_data      Json?
+  output_data     Json?
+  run             WorkflowRun              @relation(fields: [run_id], references: [id], onDelete: Cascade)
+  dependenciesAsPredecessor WorkflowTaskDependency[] @relation("TaskPredecessor")
+  dependenciesAsSuccessor   WorkflowTaskDependency[] @relation("TaskSuccessor")
+
+  @@map("workflow_tasks")
+}
+
+model WorkflowTaskDependency {
+  id            String       @id @default(uuid())
+  predecessorId String
+  successorId   String
+  predecessor   WorkflowTask @relation("TaskPredecessor", fields: [predecessorId], references: [id])
+  successor     WorkflowTask @relation("TaskSuccessor", fields: [successorId], references: [id])
+
+  @@unique([predecessorId, successorId])
+  @@map("workflow_task_dependencies")
+}
+
+model JobDefinition {
+  id             String   @id @default(uuid())
+  tenant_id      String
+  name           String
+  workflow_name  String
+  cron_schedule  String
+  last_run_at    DateTime?
+  next_run_at    DateTime?
+  is_active      Boolean  @default(true)
+  config         Json?
+  created_at     DateTime @default(now())
+  updated_at     DateTime @updatedAt
+  tenant         Tenant   @relation(fields: [tenant_id], references: [id])
+
+  @@map("job_definitions")
+}
+
+model SchemaRegistry {
   id            String   @id @default(uuid())
   tenant_id     String
-  entity_type   String
-  entity_id     String
-  file_name     String
-  file_path     String
-  uploaded_by   String
-  uploaded_at   DateTime @default(now())
-  document_type String
+  entity_type   String   // e.g., "LedgerEntry", "Invoice"
+  schema_json   Json
+  version       Int      @default(1)
+  is_active     Boolean  @default(true)
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
   tenant        Tenant   @relation(fields: [tenant_id], references: [id])
-  user          User     @relation(fields: [uploaded_by], references: [id])
+
+  @@unique([tenant_id, entity_type, version])
+  @@map("schema_registry")
+}
+
+model AccountMap {
+  id              String   @id @default(uuid())
+  tenant_id       String
+  source_system   String
+  source_code     String
+  target_account_id String
+  confidence_score Int      @default(100)
+  is_manual       Boolean  @default(false)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+  tenant          Tenant   @relation(fields: [tenant_id], references: [id])
+  targetAccount   Account  @relation(fields: [target_account_id], references: [id])
+
+  @@unique([tenant_id, source_system, source_code])
+  @@map("account_maps")
+}
+
+model ConditioningLog {
+  id              String   @id @default(uuid())
+  tenant_id       String
+  run_id          String?
+  entity_type     String
+  entity_id       String
+  original_value  Json?
+  applied_fix     String
+  confidence_delta Int
+  created_at      DateTime @default(now())
+  tenant          Tenant   @relation(fields: [tenant_id], references: [id])
+
+  @@map("conditioning_logs")
+}
+
+model LineageTrail {
+  id              String   @id @default(uuid())
+  tenant_id       String
+  child_type      String   // e.g., "LedgerEntry"
+  child_id        String
+  parent_type     String   // e.g., "RawRecord"
+  parent_id       String
+  transformation  String   // Name of the rule applied
+  created_at      DateTime @default(now())
+  tenant          Tenant   @relation(fields: [tenant_id], references: [id])
+
+  @@index([parent_id])
+  @@map("lineage_trails")
+}
+
+model PeriodLock {
+  id          String   @id @default(uuid())
+  tenantId    String
+  periodName  String   // e.g., "2024-03" or "2024-Q1"
+  isLocked    Boolean  @default(false)
+  lockedAt    DateTime?
+  lockedById  String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  lockedBy    User?    @relation("PeriodLockedBy", fields: [lockedById], references: [id])
+
+  @@unique([tenantId, periodName])
+  @@map("period_locks")
+}
+
+model IntegritySeal {
+  id            String   @id @default(uuid())
+  tenantId      String
+  batchId       String   @unique
+  sealHash      String   // SHA-256 Merkle Root
+  sealedAt      DateTime @default(now())
+  sealedById    String?
+  createdAt     DateTime @default(now())
+
+  tenant        Tenant   @relation(fields: [tenantId], references: [id])
+  sealedBy      User?    @relation("SealedBy", fields: [sealedById], references: [id])
+
+  @@index([tenantId])
+  @@map("integrity_seals")
+}
+
+model TaxJurisdiction {
+  id           String    @id @default(uuid())
+  tenantId     String
+  name         String    // e.g., "India", "UK", "California"
+  countryCode  String
+  currency     String
+  isDefault    Boolean   @default(false)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  tenant       Tenant    @relation(fields: [tenantId], references: [id])
+  taxRates     TaxRate[]
+
+  @@unique([tenantId, countryCode, name])
+  @@map("tax_jurisdictions")
+}
+
+model TaxRate {
+  id              String   @id @default(uuid())
+  jurisdictionId  String
+  taxCode         String   // e.g., "GST_18", "VAT_20"
+  taxType         String   // VAT, GST, SalesTax
+  rate            Decimal  @db.Decimal(19, 4)
+  effectiveFrom   DateTime
+  effectiveTo     DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  jurisdiction    TaxJurisdiction @relation(fields: [jurisdictionId], references: [id])
+
+  @@unique([jurisdictionId, taxCode])
+  @@map("tax_rates")
+}
+
+model ApprovalWorkflow {
+  id          String   @id @default(uuid())
+  tenantId    String
+  name        String
+  description String?
+  steps_count Int      @default(1)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  requests    ApprovalRequest[]
+
+  @@map("approval_workflows")
+}
+
+model ApprovalRequest {
+  id            String   @id @default(uuid())
+  tenantId      String
+  workflowId    String
+  entityType    String   // "LedgerEntry", "Snapshot"
+  entityId      String
+  status        String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  requestedById String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  tenant        Tenant           @relation(fields: [tenantId], references: [id])
+  workflow      ApprovalWorkflow @relation(fields: [workflowId], references: [id])
+  requestedBy   User             @relation("RequestedBy", fields: [requestedById], references: [id])
+  steps         ApprovalStep[]
+  
+  ledgerEntry   LedgerEntry?     @relation(fields: [entityId], references: [id], map: "ApprovalRequestLedgerEntry")
+  snapshot      Snapshot?        @relation(fields: [entityId], references: [id], map: "ApprovalRequestSnapshot")
+
+  @@map("approval_requests")
+}
+
+model ApprovalStep {
+  id          String   @id @default(uuid())
+  requestId   String
+  stepOrder   Int
+  status      String   @default("PENDING")
+  approverId  String?
+  comments    String?
+  actionedAt  DateTime?
+  createdAt   DateTime @default(now())
+
+  request     ApprovalRequest @relation(fields: [requestId], references: [id])
+  approver    User?           @relation("Approver", fields: [approverId], references: [id])
+
+  @@map("approval_steps")
+}
+
+model EvidenceDocument {
+  id                String   @id @default(uuid())
+  tenantId          String
+  entityType        String   // "LedgerEntry", "Snapshot"
+  entityId          String
+  fileName          String
+  fileType          String
+  fileUrl           String   // S3/Cloud storage reference
+  digitalSignature  String?  // SHA-256 hash of file content
+  version           Int      @default(1)
+  previousVersionId String?  @unique
+  uploadedById      String?
+  uploadedAt        DateTime @default(now())
+
+  tenant            Tenant   @relation(fields: [tenantId], references: [id])
+  uploadedBy        User?    @relation(fields: [uploadedById], references: [id])
+  ledgerEntry       LedgerEntry? @relation(fields: [entityId], references: [id], map: "EvidenceLedgerEntry")
+  snapshot          Snapshot?    @relation(fields: [entityId], references: [id], map: "EvidenceSnapshot")
+  
+  previousVersion   EvidenceDocument? @relation("EvidenceHistory", fields: [previousVersionId], references: [id])
+  nextVersion       EvidenceDocument? @relation("EvidenceHistory")
 
   @@map("evidence_documents")
+}
+
+model AnomalyAlert {
+  id              String   @id @default(uuid())
+  tenantId        String
+  ledgerEntryId   String
+  confidenceScore Float
+  reasoning       String
+  severity        String   // LOW, MEDIUM, HIGH, CRITICAL
+  status          String   @default("OPEN") // OPEN, INVESTIGATING, RESOLVED, FALSE_POSITIVE
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  tenant          Tenant        @relation(fields: [tenantId], references: [id])
+  ledgerEntry     LedgerEntry   @relation(fields: [ledgerEntryId], references: [id])
+  investigations  Investigation[]
+
+  @@map("anomaly_alerts")
+}
+
+model Investigation {
+  id              String   @id @default(uuid())
+  tenantId        String
+  alertId         String
+  assignedTo      String?
+  findings        String?
+  resolution      String?
+  status          String   @default("OPEN")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  tenant          Tenant        @relation(fields: [tenantId], references: [id])
+  alert           AnomalyAlert  @relation(fields: [alertId], references: [id])
+  assignee        User?         @relation("InvestigationAssignee", fields: [assignedTo], references: [id])
+
+  @@map("investigations")
+}
+
+model Budget {
+  id          String       @id @default(uuid())
+  tenantId    String
+  name        String
+  fiscalYear  Int
+  status      String       @default("DRAFT") // DRAFT, ACTIVE, ARCHIVED
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  tenant      Tenant       @relation(fields: [tenantId], references: [id])
+  items       BudgetItem[]
+
+  @@map("budgets")
+}
+
+model BudgetItem {
+  id         String   @id @default(uuid())
+  budgetId   String
+  accountId  String
+  amount     Decimal  @db.Decimal(19, 4)
+  period     String?  // Optional: "Q1", "JAN", etc.
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  budget     Budget   @relation(fields: [budgetId], references: [id])
+  account    Account  @relation(fields: [accountId], references: [id])
+
+  @@map("budget_items")
 }

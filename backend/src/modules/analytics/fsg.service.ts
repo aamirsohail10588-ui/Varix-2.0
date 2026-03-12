@@ -178,6 +178,26 @@ export class FsgService {
             );
         }
     }
+
+    /**
+     * Final synthesis of financial intelligence for executive reporting.
+     */
+    async generateIntelligenceSummary(tenantId: string) {
+        const { BenchmarkService } = await import("../intelligence/benchmark.service");
+        const { PredictiveService } = await import("../intelligence/predictive.service");
+
+        const benchmarks = await BenchmarkService.getTenantBenchmarks(tenantId);
+        const cashFlowForecast = await PredictiveService.predictCashFlow(tenantId);
+        const riskProfile = await PredictiveService.predictRiskProbability(tenantId);
+
+        return {
+            intelligence_timestamp: new Date(),
+            benchmarks,
+            forecast: cashFlowForecast,
+            risk_profile: riskProfile,
+            summary_alerts: benchmarks.filter(b => b.is_anomaly).map(b => `Strategic Anomaly: ${b.metric_name} is outside industry norm.`)
+        };
+    }
 }
 
 export const fsgService = new FsgService();

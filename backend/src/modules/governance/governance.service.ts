@@ -1,158 +1,157 @@
+/**
+ * MODULE: Governance Service
+ * PATH: src/modules/governance/governance.service.ts
+ */
+
 import prisma from "../../infrastructure/prisma";
-import crypto from "crypto";
-import { analyticsService } from "../analytics/analytics.service";
-import { auditService } from "../../services/audit.service";
 
 export class GovernanceService {
-    // --- Close Cycle Management ---
-    async createCycle(tenantId: string, name: string, startDate: Date, endDate: Date, closeDeadline?: Date) {
-        return prisma.closeCycle.create({
-            data: {
-                tenantId,
-                name,
-                startDate,
-                endDate,
-                close_deadline: closeDeadline,
-                status: "OPEN"
-            }
+    /**
+     * Create a new approval request for an entry or batch
+     */
+    static async createApprovalRequest(tenantId: string, workflowId: string, entityType: string, entityId: string, requestedById: string) {
+        const workflow = await (prisma as any).approvalWorkflow.findUnique({
+            where: { id: workflowId }
         });
-    }
 
-    async createCloseTask(tenantId: string, cycleId: string, name: string, description?: string, assignedRoleId?: string) {
-        return prisma.closeTask.create({
+        if (!workflow) throw new Error("Approval workflow not found");
+
+        const request = await (prisma as any).approvalRequest.create({
             data: {
                 tenantId,
-                cycleId,
-                name,
-                description,
-                assignedRoleId,
+                workflowId,
+                entityType,
+                entityId,
+                requestedById,
                 status: "PENDING"
             }
         });
-    }
 
-    async addTaskDependency(predecessorId: string, successorId: string) {
-        return prisma.taskDependency.create({
-            data: { predecessorId, successorId }
-        });
-    }
-
-    async evaluateTaskStatus(taskId: string) {
-        const task = await prisma.closeTask.findUnique({
-            where: { id: taskId },
-            include: { dependenciesAsSuccessor: { include: { predecessor: true } } }
-        });
-        if (!task) return null;
-
-        let allPredecessorsCompleted = task.dependenciesAsSuccessor.every(dep => dep.predecessor.status === "COMPLETED");
-
-        if (allPredecessorsCompleted && task.status === "BLOCKED") {
-            return prisma.closeTask.update({ where: { id: taskId }, data: { status: "PENDING" } });
-        }
-        if (!allPredecessorsCompleted && task.status !== "BLOCKED" && task.status !== "COMPLETED") {
-            return prisma.closeTask.update({ where: { id: taskId }, data: { status: "BLOCKED" } });
-        }
-        return task;
-    }
-
-    async addEvidence(taskId: string, uploadedById: string, fileName: string, fileUrl: string) {
-        return prisma.taskEvidence.create({
-            data: { taskId, uploadedById, fileName, fileUrl }
-        });
-    }
-
-    async approveTask(taskId: string, approvedById: string, status: "APPROVED" | "REJECTED", comments?: string) {
-        const approval = await prisma.taskApproval.create({
-            data: { taskId, approvedById, status, comments }
-        });
-
-        if (status === "APPROVED") {
-            const task = await prisma.closeTask.update({
-                where: { id: taskId },
-                data: { status: "COMPLETED" },
-                include: { dependenciesAsPredecessor: true }
+        // Initialize steps
+        const steps = [];
+        for (let i = 1; i <= workflow.steps_count; i++) {
+            steps.push({
+                requestId: request.id,
+                stepOrder: i,
+                status: "PENDING"
             });
-
-            for (const dependent of task.dependenciesAsPredecessor) {
-                await this.evaluateTaskStatus(dependent.successorId);
-            }
-            await this.attemptCloseCycle(task.cycleId);
         }
 
-        await auditService.logAction("TASK_APPROVAL", "CloseTask", taskId, { status }, approvedById);
-        return approval;
-    }
-
-    async attemptCloseCycle(cycleId: string) {
-        const cycle = await prisma.closeCycle.findUnique({
-            where: { id: cycleId },
-            include: { tasks: true }
+        await (prisma as any).approvalStep.createMany({
+            data: steps
         });
-        if (!cycle) return false;
 
-        const allCompleted = cycle.tasks.every((t: any) => t.status === "COMPLETED");
-        if (allCompleted) {
-            await prisma.closeCycle.update({ where: { id: cycleId }, data: { status: "CLOSED" } });
-            return true;
-        }
-        return false;
+        return request;
     }
 
-    // --- Control Execution ---
-    async executeControls(tenantId: string, snapshotId: string) {
-        const specs = await prisma.controlSpec.findMany({ where: { tenantId, isActive: true } });
-        if (specs.length === 0) return;
+    /**
+     * Action an approval step
+     */
+    static async actionStep(requestId: string, stepId: string, approverId: string, status: "APPROVED" | "REJECTED", comments?: string) {
+        const step = await (prisma as any).approvalStep.findUnique({
+            where: { id: stepId }
+        });
 
-        const run = await prisma.controlRun.create({ data: { tenantId, snapshot_id: snapshotId, status: "RUNNING" } });
-        const records = await prisma.rawRecord.findMany({ where: { snapshotId } });
-        const results: any[] = [];
+        if (!step) throw new Error("Step not found");
+        if (step.status !== "PENDING") throw new Error("Step already processed");
 
-        // Simple duplicate & limit checks (Simplified version for modular service)
-        const invoiceMap = new Map<string, any>();
-        records.forEach(r => {
-            const data = r.payload_json as any;
-            const inv = data.invoice_number || data.InvoiceNumber;
-            const amount = parseFloat(data.amount || data.debit || "0");
-
-            if (inv && amount > 0) {
-                if (invoiceMap.has(inv)) {
-                    results.push({
-                        controlRunId: run.id,
-                        control_id: specs.find(s => s.ruleType === "DUPLICATE_INVOICE")?.id || specs[0].id,
-                        entity_reference: inv,
-                        severity: "ERROR",
-                        violation_message: `Duplicate Invoice Detected: ${inv}`,
-                    });
-                }
-                invoiceMap.set(inv, r);
+        await (prisma as any).approvalStep.update({
+            where: { id: stepId },
+            data: {
+                status,
+                approverId,
+                comments,
+                actionedAt: new Date()
             }
         });
 
-        if (results.length > 0) await prisma.controlResult.createMany({ data: results });
-        await prisma.controlRun.update({ where: { id: run.id }, data: { status: "COMPLETED" } });
-
-        // Trigger Analytics
-        const d = new Date();
-        const period = `${d.getFullYear()}-Q${Math.floor(d.getMonth() / 3) + 1}`;
-        await analyticsService.calculatePeriodRisk(tenantId, period);
-    }
-
-    // --- Snapshot Verification ---
-    async getVerifiedSnapshots(tenantId: string) {
-        const snapshots = await prisma.snapshot.findMany({
-            where: { tenant_id: tenantId },
-            orderBy: { snapshot_timestamp: "desc" },
-            include: { rawRecords: true }
+        // Check if all steps approved
+        const allSteps = await (prisma as any).approvalStep.findMany({
+            where: { requestId }
         });
 
-        return snapshots.map((snap: any) => {
-            const hashData = snap.rawRecords.map((r: any) => r.payload_json);
-            const calculatedHash = crypto.createHash("sha256").update(JSON.stringify(hashData)).digest("hex");
-            const isTampered = snap.status === "PROCESSED" && snap.payload_hash !== calculatedHash;
-            const { rawRecords, ...rest } = snap;
-            return { ...rest, calculatedHash, isTampered };
+        if (status === "REJECTED") {
+            await (prisma as any).approvalRequest.update({
+                where: { id: requestId },
+                data: { status: "REJECTED" }
+            });
+        } else if (allSteps.every((s: any) => s.status === "APPROVED")) {
+            // Layer 13: Final Integrity Check
+            // In a real system, we'd block if evidence is missing or signatures are broken
+            await (prisma as any).approvalRequest.update({
+                where: { id: requestId },
+                data: { status: "APPROVED" }
+            });
+        }
+
+        return { success: true };
+    }
+
+    /**
+     * Link evidence document to an entity
+     */
+    static async linkEvidence(tenantId: string, entityType: string, entityId: string, fileName: string, fileType: string, fileUrl: string, uploadedById: string, signature?: string) {
+        return await (prisma as any).evidenceDocument.create({
+            data: {
+                tenantId,
+                entityType,
+                entityId,
+                fileName,
+                fileType,
+                fileUrl,
+                digitalSignature: signature,
+                version: 1,
+                uploadedById
+            }
+        });
+    }
+
+    /**
+     * Supersede an existing evidence document with a new version
+     */
+    static async supersedeEvidence(previousId: string, fileUrl: string, uploadedById: string, signature?: string) {
+        const previous = await (prisma as any).evidenceDocument.findUnique({
+            where: { id: previousId }
+        });
+
+        if (!previous) throw new Error("Previous evidence version not found");
+
+        // Ensure we don't already have a next version
+        const existingNext = await (prisma as any).evidenceDocument.findFirst({
+            where: { previousVersionId: previousId }
+        });
+        if (existingNext) throw new Error("Evidence already has a newer version");
+
+        return await (prisma as any).evidenceDocument.create({
+            data: {
+                tenantId: previous.tenantId,
+                entityType: previous.entityType,
+                entityId: previous.entityId,
+                fileName: previous.fileName,
+                fileType: previous.fileType,
+                fileUrl,
+                digitalSignature: signature,
+                version: previous.version + 1,
+                previousVersionId: previousId,
+                uploadedById
+            }
+        });
+    }
+
+    /**
+     * Get pending approvals for a user
+     */
+    static async getPendingApprovals(approverId: string) {
+        // Simple logic: return all steps where this user could potentially be an approver
+        // In a real system, we'd check roles/permissions
+        return await (prisma as any).approvalStep.findMany({
+            where: {
+                status: "PENDING",
+                // This is a simplification; normally we'd filter by workflow rules
+            },
+            include: {
+                request: true
+            }
         });
     }
 }
-
-export const governanceService = new GovernanceService();

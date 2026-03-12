@@ -1,15 +1,14 @@
 import fs from "fs";
 import prisma from "../infrastructure/prisma";
 import { spawn } from "child_process";
+import { ingestionService } from "../modules/ingestion/ingestion.service";
 
 export class CsvIngestionPipeline {
 
     async processExtremeScale(filePath: string, tenantId: string, batchId: string) {
-
         console.log(`[Pipeline] Starting ingestion for batch ${batchId}`);
 
         try {
-
             // Create snapshot so normalization worker can process later
             const snapshot = await prisma.snapshot.create({
                 data: {
@@ -19,6 +18,8 @@ export class CsvIngestionPipeline {
                     snapshot_timestamp: new Date(),
                 }
             });
+
+            await ingestionService.transitionState(batchId, "VALIDATING");
 
             const rawDbUrl = process.env.DATABASE_URL!;
             const dbUrlObj = new URL(rawDbUrl);
@@ -38,6 +39,8 @@ export class CsvIngestionPipeline {
             const copyCmd = `psql "${dbUrl}" -c "\\copy ${stagingTable}(${headers.map((h) => `"${h}"`).join(",")}) FROM '${filePath.replace(/\\/g, "/")}' WITH (FORMAT csv, HEADER true)"`;
             await this.runShellCommand(copyCmd);
 
+            await ingestionService.transitionState(batchId, "STAGED");
+
             await prisma.$executeRaw`SET LOCAL synchronous_commit = OFF`;
 
             // --- FAST PATH NORMALIZATION START ---
@@ -56,7 +59,7 @@ export class CsvIngestionPipeline {
                 data: { tenantId, code: "UNMAPPED", name: "Unmapped Ingestions", type: "ASSET" }
             });
 
-            // --- PARTITION AUTO-CREATION START (Fix #8) ---
+            // --- PARTITION AUTO-CREATION START ---
             console.log(`[Pipeline] Ensuring partitions exist for ${stagingTable}...`);
             const yearsResult: any[] = await prisma.$queryRawUnsafe(`
                 SELECT DISTINCT EXTRACT(YEAR FROM (COALESCE(NULLIF("${dateCol}", ''), now()::text))::timestamp)::int as year 
@@ -76,12 +79,9 @@ export class CsvIngestionPipeline {
                 `);
                 console.log(`[Pipeline] Verified partition ${partitionName}`);
             }
-            // --- PARTITION AUTO-CREATION END ---
 
-            console.log(`[Pipeline] Snapshot ${snapshot.id}: Executing Fast Path Normalization via psql file bridge...`);
+            console.log(`[Pipeline] Snapshot ${snapshot.id}: Executing Fast Path Normalization...`);
 
-            // 3. Direct Set-Based Normalization (Using psql file bridge for ultimate stability)
-            // Use placeholders for values to prevent injection
             const normSql = `
                 INSERT INTO ledger_entries (
                     id, tenant_id, transaction_date, account_id,
@@ -108,32 +108,22 @@ export class CsvIngestionPipeline {
             fs.writeFileSync(sqlFilePath, normSql);
 
             try {
-                // Pass variables safely via psql -v
                 const normCmd = `psql "${dbUrl}" -v tenant_id=${tenantId} -v unmapped_id=${unmappedAccount.id} -v snapshot_id=${snapshot.id} -v batch_id=${batchId} -f "${sqlFilePath}"`;
                 await this.runShellCommand(normCmd);
             } finally {
                 if (fs.existsSync(sqlFilePath)) fs.unlinkSync(sqlFilePath);
             }
 
-            // Fetch the count after psql insert (Parameterize value)
             const countResult: any[] = await prisma.$queryRaw`
                 SELECT COUNT(*)::int as count FROM ledger_entries WHERE snapshot_id = ${snapshot.id}::uuid
             `;
             const count = countResult[0]?.count || 0;
 
-            // Note: raw_records insert remains partially unsafe due to dynamic jsonb_build_object keys,
-            // but identifiers are sanitized. Values (batchId, snapshotId) are interpolated but are UUIDs.
-            // Still, for absolute safety:
-            // TODO: Move jsonb_build_object construction to a safer pattern if headers are untrusted.
-            // Given rules, we prioritize using placeholders for values where possible.
+            await ingestionService.transitionState(batchId, "NORMALIZED");
 
             await prisma.$executeRawUnsafe(`DROP TABLE ${stagingTable}`);
 
-            // Mark COMPLETED immediately to satisfy performance targets and bypass background worker
-            await prisma.ingestionBatch.update({
-                where: { id: batchId },
-                data: { status: "completed" }
-            });
+            await ingestionService.transitionState(batchId, "COMMITTED");
 
             await prisma.snapshot.update({
                 where: { id: snapshot.id },
@@ -152,22 +142,13 @@ export class CsvIngestionPipeline {
             };
 
         } catch (err) {
-
             console.error("[Pipeline] ingestion failed:", err);
-
-            await prisma.ingestionBatch.update({
-                where: { id: batchId },
-                data: { status: "failed" }
-            }).catch(() => { });
-
+            await ingestionService.transitionState(batchId, "FAILED", { error: err instanceof Error ? err.message : String(err) });
             throw err;
-
         } finally {
-
             if (fs.existsSync(filePath)) {
                 fs.unlinkSync(filePath);
             }
-
         }
     }
 
@@ -202,7 +183,6 @@ export class CsvIngestionPipeline {
 
     private runShellCommand(cmd: string): Promise<void> {
         return new Promise((resolve, reject) => {
-
             const shellProcess = spawn(cmd, { shell: true });
 
             shellProcess.stdout.on("data", (data) => {
@@ -217,7 +197,6 @@ export class CsvIngestionPipeline {
                 if (code === 0) resolve();
                 else reject(new Error(`Command exited with code ${code}`));
             });
-
         });
     }
 }

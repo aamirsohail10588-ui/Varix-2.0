@@ -17,6 +17,7 @@
 import prisma from "../infrastructure/prisma"
 import { logAuditAction } from "./audit.service";
 import type { ErpConnector } from "@prisma/client";
+import { ConnectorFactory } from "../modules/sources/connector.factory";
 
 // ─────────────────────────────────────────────
 // TYPES
@@ -71,17 +72,17 @@ export class SyncService {
                 },
             });
 
-            // Dispatch to connector-specific implementation
-            let result: SyncResult;
+            // Dispatch to connector-specific implementation via Factory
+            const connectorInstance = await ConnectorFactory.getConnector(
+                connector.connector_type,
+                tenantId,
+                connectorId
+            );
 
-            if (connector.connector_type === "SAP_CONNECTOR") {
-                result = await this.performSapSync(connector);
-            } else if (connector.connector_type === "ZOHO_CONNECTOR") {
-                result = await this.performZohoSync(connector);
-            } else {
-                throw new Error(
-                    `Sync not implemented for connector type: ${connector.connector_type}`
-                );
+            const result = await connectorInstance.sync();
+
+            if (!result.success) {
+                throw new Error(result.error || "Sync failed without specific error message");
             }
 
             // Complete job — schema uses snake_case: completed_at
@@ -91,35 +92,26 @@ export class SyncService {
                 data: {
                     status: "COMPLETED",
                     completed_at: new Date(),
-                    record_count: result.recordsProcessed,
+                    record_count: result.records_synced,
                 },
             });
 
-            // Update connector last sync timestamp
-            await prisma.erpConnector.update({
-                where: { id: connectorId },
-                data: { last_sync_at: new Date() },
-            });
-
-            // Write success log — schema uses snake_case: job_id
+            // Audit and logs are handled by BaseConnector as well
+            // but we keep high-level service logs for redundancy
             await prisma.syncLog.create({
                 data: {
                     job_id: job.id,
                     level: "INFO",
-                    message: `Sync completed. Processed: ${result.recordsProcessed}, Inserted: ${result.recordsInserted}, Updated: ${result.recordsUpdated}`,
+                    message: `Framework Sync completed. Processed: ${result.records_synced}`,
                 },
             });
 
-            await logAuditAction(
-                "SYNC_COMPLETED",
-                "ErpConnector",
-                connectorId,
-                { syncMode, result },
-                "SYSTEM",
-                tenantId
-            );
-
-            return result;
+            return {
+                recordsProcessed: result.records_synced,
+                recordsInserted: result.records_synced,
+                recordsUpdated: 0,
+                errors: [],
+            };
         } catch (error: unknown) {
             const message =
                 error instanceof Error ? error.message : "Unknown sync error";
