@@ -21,14 +21,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         if (!token && !isAuthPage) {
             router.push("/login");
         }
-
-        // Proactively clear potentially restricted cookies if on auth pages
-        if (isAuthPage) {
-            Cookies.remove("token", { path: "/login" });
-            Cookies.remove("token", { path: "/register" });
-            Cookies.remove("token", { path: "/" });
-            Cookies.remove("tenantId", { path: "/" });
-        }
     }, [pathname, router]);
 
     // Sync state with CSS variable for children to use if needed
@@ -39,9 +31,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         );
     }, [collapsed]);
 
+    const isAuthPage = pathname.includes("/login") || pathname.includes("/register");
+
+    if (isAuthPage) {
+        return <main className="min-h-screen w-full">{children}</main>;
+    }
+
     return (
         <div className="min-h-screen bg-background flex">
-            {/* Portals or fixed elements like right context panel can be added here */}
             <Sidebar collapsed={collapsed} setCollapsed={setCollapsed} />
 
             <div

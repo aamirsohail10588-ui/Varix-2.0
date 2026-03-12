@@ -24,14 +24,14 @@ interface SystemState {
         queueDepth: number;
     };
     reconciliation: {
-        runs: ReconciliationRun[];
+        runs: any[];
     };
-    integrity: IntegrityScore | null;
+    integrity: IntegrityScore;
     governance: {
         violations: GovernanceViolation[];
         currentCycle: CloseCycle | null;
     };
-    anomalies: RiskVectors | null;
+    anomalies: RiskVectors;
     erp: {
         connectors: ERPConnector[];
     };
@@ -55,9 +55,9 @@ export function SystemStateProvider({ children }: { children: React.ReactNode })
         ledger: null,
         ingestion: { history: [], queueDepth: 0 },
         reconciliation: { runs: [] },
-        integrity: null,
+        integrity: { final_score: 0, integrity_component: 0, risk_component: 0, anomaly_component: 0, timestamp: new Date().toISOString() },
         governance: { violations: [], currentCycle: null },
-        anomalies: null,
+        anomalies: { tax_risk: 0, journal_risk: 0, reconciliation_gap: 0, compliance_score: 0 },
         erp: { connectors: [] },
         auditEvidence: { logs: [] },
         fpna: { benchmarks: [], summary: null },
@@ -71,6 +71,7 @@ export function SystemStateProvider({ children }: { children: React.ReactNode })
             if (typeof window !== "undefined" && !window.location.pathname.includes("/login")) {
                 window.location.href = "/login";
             }
+            setState(prev => ({ ...prev, loading: false }));
             return;
         }
 
@@ -93,12 +94,23 @@ export function SystemStateProvider({ children }: { children: React.ReactNode })
             const getValue = (index: number, defaultValue: any) =>
                 results[index].status === 'fulfilled' ? (results[index] as PromiseFulfilledResult<any>).value : defaultValue;
 
-            const healthRes = getValue(0, { data: { status: "DEGRADED" } });
+            const healthRes = getValue(0, null);
+
+            if (!healthRes) {
+                console.error("Health API unavailable");
+                setState(prev => ({
+                    ...prev,
+                    loading: false,
+                    error: "System health API unavailable"
+                }));
+                return;
+            }
+
             const healthData = healthRes.data;
 
             setState({
                 health: {
-                    status: healthData.status || "DEGRADED",
+                    status: (healthData.status as "HEALTHY" | "DEGRADED" | "CRITICAL") || "DEGRADED",
                     latency: Math.round(Number(healthData.performance?.snapshot_processing_duration || 0)),
                     uptime: "12d 4h 12m",
                 },
@@ -110,12 +122,12 @@ export function SystemStateProvider({ children }: { children: React.ReactNode })
                 reconciliation: {
                     runs: getValue(8, []),
                 },
-                integrity: getValue(6, null),
+                integrity: getValue(6, { final_score: 0, integrity_component: 0, risk_component: 0, anomaly_component: 0 }),
                 governance: {
                     violations: getValue(3, []),
                     currentCycle: getValue(4, null),
                 },
-                anomalies: getValue(5, null),
+                anomalies: getValue(5, { tax_risk: 0, journal_risk: 0, reconciliation_gap: 0, compliance_score: 0 }),
                 erp: { connectors: getValue(7, []) },
                 auditEvidence: { logs: getValue(9, []) },
                 fpna: {
@@ -127,14 +139,33 @@ export function SystemStateProvider({ children }: { children: React.ReactNode })
             });
         } catch (err: any) {
             console.error("Failed to fetch system state", err);
-            setState(prev => ({ ...prev, loading: false, error: err.message }));
+
+            setState({
+                health: null,
+                ledger: null,
+                ingestion: { history: [], queueDepth: 0 },
+                reconciliation: { runs: [] },
+                integrity: { final_score: 0, integrity_component: 0, risk_component: 0, anomaly_component: 0, timestamp: new Date().toISOString() },
+                governance: { violations: [], currentCycle: null },
+                anomalies: { tax_risk: 0, journal_risk: 0, reconciliation_gap: 0, compliance_score: 0 },
+                erp: { connectors: [] },
+                auditEvidence: { logs: [] },
+                fpna: { benchmarks: [], summary: null },
+                loading: false,
+                error: err?.message || "System initialization failed",
+            });
         }
     }, []);
 
     useEffect(() => {
-        fetchSystemData();
-        const interval = setInterval(fetchSystemData, 60000);
-        return () => clearInterval(interval);
+        const timer = setTimeout(() => {
+            fetchSystemData();
+        }, 0);
+        const interval = setInterval(fetchSystemData, 300000);
+        return () => {
+            clearTimeout(timer);
+            clearInterval(interval);
+        };
     }, [fetchSystemData]);
 
     return (

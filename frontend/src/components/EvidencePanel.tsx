@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import axios from "axios";
-import Cookies from "js-cookie";
+import { useState, useEffect, useCallback } from "react";
+import apiClient from "@/services/apiClient";
 import { FileText, UploadCloud, Trash2, XCircle, CheckCircle } from "lucide-react";
 
 interface EvidencePanelProps {
@@ -17,30 +16,23 @@ export default function EvidencePanel({ entityId, entityType, defaultDocType = "
     const [uploading, setUploading] = useState(false);
     const [error, setError] = useState("");
 
-    // Read list on mount
-    useEffect(() => {
+    const fetchDocuments = useCallback(async () => {
         if (!entityId) return;
-        fetchDocuments();
-    }, [entityId]);
-
-    const fetchDocuments = async () => {
         setLoading(true);
         try {
-            const token = Cookies.get("token");
-            const tenantId = localStorage.getItem("activeTenantId");
-            const res = await axios.get(`http://localhost:5000/api/evidence/by-entity/${entityId}`, {
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    "x-tenant-id": tenantId
-                }
-            });
+            const res = await apiClient.get(`/evidence/by-entity/${entityId}`);
             setDocuments(res.data || []);
         } catch (err) {
             console.error("Failed to load evidence for entity", err);
         } finally {
             setLoading(false);
         }
-    };
+    }, [entityId]);
+
+    // Read list on mount
+    useEffect(() => {
+        fetchDocuments();
+    }, [fetchDocuments]);
 
     const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -50,19 +42,14 @@ export default function EvidencePanel({ entityId, entityType, defaultDocType = "
         setError("");
 
         try {
-            const token = Cookies.get("token");
-            const tenantId = localStorage.getItem("activeTenantId");
-
             const formData = new FormData();
             formData.append("file", file);
             formData.append("entity_type", entityType);
             formData.append("entity_id", entityId);
             formData.append("document_type", defaultDocType);
 
-            await axios.post("http://localhost:5000/api/evidence/upload", formData, {
+            await apiClient.post("/evidence/upload", formData, {
                 headers: {
-                    Authorization: `Bearer ${token}`,
-                    "x-tenant-id": tenantId,
                     "Content-Type": "multipart/form-data"
                 }
             });

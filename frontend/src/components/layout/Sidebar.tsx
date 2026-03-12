@@ -21,7 +21,6 @@ import {
     Settings,
     ShieldAlert,
     Archive,
-    Menu,
     ChevronLeft,
     ChevronRight
 } from "lucide-react";
@@ -80,12 +79,14 @@ export default function Sidebar({
     const [user, setUser] = useState<any>(null);
 
     useEffect(() => {
-        const storedUser = localStorage.getItem("user");
-        if (storedUser) {
-            try {
-                setUser(JSON.parse(storedUser));
-            } catch (e) {
-                console.error("Failed to parse user from localStorage", e);
+        if (typeof window !== "undefined") {
+            const storedUser = localStorage.getItem("user");
+            if (storedUser) {
+                try {
+                    setUser(JSON.parse(storedUser));
+                } catch (e) {
+                    console.error("Failed to parse user from localStorage", e);
+                }
             }
         }
     }, []);

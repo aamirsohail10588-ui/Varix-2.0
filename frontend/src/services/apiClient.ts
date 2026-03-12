@@ -1,4 +1,5 @@
 import axios from "axios";
+import Cookies from "js-cookie";
 
 const apiClient = axios.create({
     baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api",
@@ -8,15 +9,15 @@ const apiClient = axios.create({
 });
 
 apiClient.interceptors.request.use((config) => {
-    // Read token from localStorage as requested
-    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    // Read token from localStorage or Cookies
+    const token = typeof window !== "undefined" ? (localStorage.getItem("token") || Cookies.get("token")) : null;
 
     if (token && config.headers) {
         config.headers.Authorization = `Bearer ${token}`;
     }
 
-    // Also include tenantId if available in localStorage
-    const tenantId = typeof window !== "undefined" ? localStorage.getItem("tenantId") : null;
+    // Also include tenantId if available
+    const tenantId = typeof window !== "undefined" ? (localStorage.getItem("tenantId") || Cookies.get("tenantId")) : null;
     if (tenantId && config.headers) {
         config.headers["x-tenant-id"] = tenantId;
     }

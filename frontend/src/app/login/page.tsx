@@ -30,11 +30,13 @@ export default function LoginPage() {
             const data = res.data;
 
             Cookies.set("token", data.accessToken, { path: "/", expires: 7 });
+            localStorage.setItem("token", data.accessToken);
             localStorage.setItem("user", JSON.stringify(data.user));
 
             if (data.tenantId) {
                 Cookies.set("tenantId", data.tenantId, { path: "/", expires: 7 });
                 localStorage.setItem("activeTenantId", data.tenantId);
+                localStorage.setItem("tenantId", data.tenantId);
 
                 router.push("/dashboard");
             } else {
@@ -81,7 +83,7 @@ export default function LoginPage() {
                         </Button>
                     </form>
                     <div className="mt-4 text-center text-sm">
-                        Don't have an account?{" "}
+                        Don&apos;t have an account?{" "}
                         <a href="/register" className="text-blue-500 hover:underline">
                             Register here
                         </a>

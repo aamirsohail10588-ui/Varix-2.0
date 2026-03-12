@@ -55,16 +55,17 @@ export default function DashboardPage() {
         );
     }
 
-    if (error || !health || !integrity || !anomalies) {
+    if (error || !health) {
         return (
             <div className="p-8 text-center text-rose-500 font-bold uppercase tracking-widest flex flex-col items-center space-y-4">
                 <span>Critical Connectivity Failure</span>
+                <p className="text-[10px] text-slate-400 normal-case">{error || "System Health API unreachable"}</p>
                 <button onClick={refresh} className="px-4 py-2 bg-slate-900 text-white text-[10px] rounded-md transition-all active:scale-95">Reconnect</button>
             </div>
         );
     }
 
-    const closeProgressPct = governance.currentCycle
+    const closeProgressPct = governance.currentCycle?.tasks
         ? Math.round((governance.currentCycle.tasks.filter((t: any) => t.status === "COMPLETED").length / governance.currentCycle.tasks.length) * 100)
         : 0;
 

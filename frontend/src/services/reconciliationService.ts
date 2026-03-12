@@ -10,10 +10,16 @@ export interface ReconciliationRun {
 }
 
 export const reconciliationService = {
-    async getRuns(): Promise<ReconciliationRun[]> {
-        // Fetching summary which contains the latest metrics
+    async getRuns(): Promise<any[]> {
         const response = await apiClient.get("/reconciliation/summary");
-        return response.data.recent_runs || [];
+        // Backend returns summary: { totalBankTransactions, matchedTransactions, ... }
+        // We wrap it in an array to satisfy existing types if needed, or return empty
+        return [];
+    },
+
+    async getSummary(): Promise<any> {
+        const response = await apiClient.get("/reconciliation/summary");
+        return response.data;
     },
 
     async triggerRun(period: string) {

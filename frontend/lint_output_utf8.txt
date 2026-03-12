@@ -1,0 +1,206 @@
+﻿
+> frontend@0.1.0 lint
+> eslint
+
+
+C:\Users\Aamir Sohail\Desktop\VARIX 2.0\frontend\src\app\changes\page.tsx
+   12:22  warning  'refresh' is assigned a value but never used  @typescript-eslint/no-unused-vars
+   13:44  error    Unexpected any. Specify a different type      @typescript-eslint/no-explicit-any
+   89:43  error    Unexpected any. Specify a different type      @typescript-eslint/no-explicit-any
+  108:46  error    Unexpected any. Specify a different type      @typescript-eslint/no-explicit-any
+
+C:\Users\Aamir Sohail\Desktop\VARIX 2.0\frontend\src\app\close\page.tsx
+  11:34  warning  'refresh' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  23:40  error    Unexpected any. Specify a different type      @typescript-eslint/no-explicit-any
+  71:41  error    Unexpected any. Specify a different type      @typescript-eslint/no-explicit-any
+  84:46  error    Unexpected any. Specify a different type      @typescript-eslint/no-explicit-any
+  95:40  warning  'item' is defined but never used              @typescript-eslint/no-unused-vars
+  95:46  error    Unexpected any. Specify a different type      @typescript-eslint/no-explicit-any
+
+C:\Users\Aamir Sohail\Desktop\VARIX 2.0\frontend\src\app\controls\page.tsx
+  25:72  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\Aamir Sohail\Desktop\VARIX 2.0\frontend\src\app\dashboard\page.tsx
+  38:9   warning  'reconciliation' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  69:64  error    Unexpected any. Specify a different type             @typescript-eslint/no-explicit-any
+
+C:\Users\Aamir Sohail\Desktop\VARIX 2.0\frontend\src\app\data\connections\page.tsx
+   6:10  warning  'Plug' is defined but never used                @typescript-eslint/no-unused-vars
+  14:12  warning  'syncingId' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\Aamir Sohail\Desktop\VARIX 2.0\frontend\src\app\data\history\page.tsx
+  75:67  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  80:46  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\Aamir Sohail\Desktop\VARIX 2.0\frontend\src\app\data\mappings\page.tsx
+  82:46  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  99:46  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\Aamir Sohail\Desktop\VARIX 2.0\frontend\src\app\data\quality\page.tsx
+  29:72  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\Aamir Sohail\Desktop\VARIX 2.0\frontend\src\app\integrity\page.tsx
+  25:72  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\Aamir Sohail\Desktop\VARIX 2.0\frontend\src\app\login\page.tsx
+  46:23  error  Unexpected any. Specify a different type                         @typescript-eslint/no-explicit-any
+  86:28  error  `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+
+C:\Users\Aamir Sohail\Desktop\VARIX 2.0\frontend\src\app\modules\consolidation\page.tsx
+   91:46  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  102:46  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\Aamir Sohail\Desktop\VARIX 2.0\frontend\src\app\modules\intelligence\page.tsx
+  81:46  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  98:46  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\Aamir Sohail\Desktop\VARIX 2.0\frontend\src\app\modules\reports\page.tsx
+   10:10  warning  'cn' is defined but never used                   @typescript-eslint/no-unused-vars
+   13:22  warning  'refresh' is assigned a value but never used     @typescript-eslint/no-unused-vars
+   14:44  error    Unexpected any. Specify a different type         @typescript-eslint/no-explicit-any
+   15:12  warning  'isFetching' is assigned a value but never used  @typescript-eslint/no-unused-vars
+   86:43  error    Unexpected any. Specify a different type         @typescript-eslint/no-explicit-any
+  103:46  error    Unexpected any. Specify a different type         @typescript-eslint/no-explicit-any
+
+C:\Users\Aamir Sohail\Desktop\VARIX 2.0\frontend\src\app\modules\tax\page.tsx
+   12:13  warning  'integrity' is assigned a value but never used  @typescript-eslint/no-unused-vars
+   89:46  error    Unexpected any. Specify a different type        @typescript-eslint/no-explicit-any
+  100:46  error    Unexpected any. Specify a different type        @typescript-eslint/no-explicit-any
+
+C:\Users\Aamir Sohail\Desktop\VARIX 2.0\frontend\src\app\register\page.tsx
+  46:18  warning  'err' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\Aamir Sohail\Desktop\VARIX 2.0\frontend\src\app\workflows\page.tsx
+  23:40  error  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    @typescript-eslint/no-explicit-any
+  25:44  error  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    @typescript-eslint/no-explicit-any
+  71:41  error  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    @typescript-eslint/no-explicit-any
+  76:55  error  Error: Cannot call impure function during render
+
+`Date.now` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).
+
+C:\Users\Aamir Sohail\Desktop\VARIX 2.0\frontend\src\app\workflows\page.tsx:76:55
+  74 |                         priority: t.priority || "Medium",
+  75 |                         owner: t.assignedRoleId || "Unassigned",
+> 76 |                         date: new Date(t.createdAt || Date.now()).toLocaleDateString(),
+     |                                                       ^^^^^^^^^^ Cannot call impure function
+  77 |                         status: t.status,
+  78 |                         name: t.name || t.description
+  79 |                     }))}  react-hooks/purity
+  81:63  error  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    @typescript-eslint/no-explicit-any
+  86:46  error  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    @typescript-eslint/no-explicit-any
+  98:46  error  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    @typescript-eslint/no-explicit-any
+
+C:\Users\Aamir Sohail\Desktop\VARIX 2.0\frontend\src\components\EvidencePanel.tsx
+   6:33  warning  'Trash2' is defined but never used                                                                                 @typescript-eslint/no-unused-vars
+  15:48  error    Unexpected any. Specify a different type                                                                           @typescript-eslint/no-explicit-any
+  24:8   warning  React Hook useEffect has a missing dependency: 'fetchDocuments'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  70:23  error    Unexpected any. Specify a different type                                                                           @typescript-eslint/no-explicit-any
+
+C:\Users\Aamir Sohail\Desktop\VARIX 2.0\frontend\src\components\authority\ArchitectureNode.tsx
+  5:32  warning  'AlertCircle' is defined but never used   @typescript-eslint/no-unused-vars
+  5:45  warning  'CheckCircle2' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\Aamir Sohail\Desktop\VARIX 2.0\frontend\src\components\dashboard\ContextPanel.tsx
+   4:45  warning  'Terminal' is defined but never used                 @typescript-eslint/no-unused-vars
+  12:11  error    Unexpected any. Specify a different type             @typescript-eslint/no-explicit-any
+  19:12  warning  'isPosting' is assigned a value but never used       @typescript-eslint/no-unused-vars
+  20:12  warning  'isEscalating' is assigned a value but never used    @typescript-eslint/no-unused-vars
+  24:11  warning  'handleComment' is assigned a value but never used   @typescript-eslint/no-unused-vars
+  40:11  warning  'handleEscalate' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\Aamir Sohail\Desktop\VARIX 2.0\frontend\src\components\dashboard\ModuleWorkspace.tsx
+   4:10  warning  'LucideIcon' is defined but never used        @typescript-eslint/no-unused-vars
+   4:32  warning  'Printer' is defined but never used           @typescript-eslint/no-unused-vars
+  25:19  error    Unexpected any. Specify a different type      @typescript-eslint/no-explicit-any
+  26:16  error    Unexpected any. Specify a different type      @typescript-eslint/no-explicit-any
+  27:24  error    Unexpected any. Specify a different type      @typescript-eslint/no-explicit-any
+  28:15  error    Unexpected any. Specify a different type      @typescript-eslint/no-explicit-any
+  38:5   warning  'filters' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  40:52  error    Unexpected any. Specify a different type      @typescript-eslint/no-explicit-any
+  45:34  error    Unexpected any. Specify a different type      @typescript-eslint/no-explicit-any
+
+C:\Users\Aamir Sohail\Desktop\VARIX 2.0\frontend\src\components\dashboard\OperationalTable.tsx
+   4:40  warning  'User' is defined but never used          @typescript-eslint/no-unused-vars
+  10:22  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  10:32  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  15:11  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  16:23  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\Aamir Sohail\Desktop\VARIX 2.0\frontend\src\components\dashboard\WorkflowQueue.tsx
+  4:49  warning  'CheckCircle' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\Aamir Sohail\Desktop\VARIX 2.0\frontend\src\components\enterprise\IssueTable.tsx
+  5:44  warning  'CheckCircle2' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\Aamir Sohail\Desktop\VARIX 2.0\frontend\src\components\layout\AppShell.tsx
+  6:10  warning  'cn' is defined but never used         @typescript-eslint/no-unused-vars
+  9:8   warning  'apiClient' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\Aamir Sohail\Desktop\VARIX 2.0\frontend\src\components\layout\Sidebar.tsx
+  24:5   warning  'Menu' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          @typescript-eslint/no-unused-vars
+  80:38  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  @typescript-eslint/no-explicit-any
+  86:17  error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\Aamir Sohail\Desktop\VARIX 2.0\frontend\src\components\layout\Sidebar.tsx:86:17
+  84 |         if (storedUser) {
+  85 |             try {
+> 86 |                 setUser(JSON.parse(storedUser));
+     |                 ^^^^^^^ Avoid calling setState() directly within an effect
+  87 |             } catch (e) {
+  88 |                 console.error("Failed to parse user from localStorage", e);
+  89 |             }  react-hooks/set-state-in-effect
+
+C:\Users\Aamir Sohail\Desktop\VARIX 2.0\frontend\src\components\layout\TopBar.tsx
+  5:10  warning  'cn' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\Aamir Sohail\Desktop\VARIX 2.0\frontend\src\components\modals\TestImportModal.tsx
+  17:20  warning  'setPeriod' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  44:19  warning  'res' is assigned a value but never used        @typescript-eslint/no-unused-vars
+  68:25  error    Unexpected any. Specify a different type        @typescript-eslint/no-explicit-any
+
+C:\Users\Aamir Sohail\Desktop\VARIX 2.0\frontend\src\services\auditService.ts
+  10:14  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\Aamir Sohail\Desktop\VARIX 2.0\frontend\src\services\erpService.ts
+  16:33  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\Aamir Sohail\Desktop\VARIX 2.0\frontend\src\services\governanceService.ts
+  15:12  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\Aamir Sohail\Desktop\VARIX 2.0\frontend\src\services\reconciliationService.ts
+  13:30  error    Unexpected any. Specify a different type       @typescript-eslint/no-explicit-any
+  14:15  warning  'response' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  20:33  error    Unexpected any. Specify a different type       @typescript-eslint/no-explicit-any
+
+C:\Users\Aamir Sohail\Desktop\VARIX 2.0\frontend\src\state\SystemStateProvider.tsx
+   10:33  warning  'ReconciliationRun' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            @typescript-eslint/no-unused-vars
+   23:18  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+   27:15  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+   94:60  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+   95:99  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+  140:23  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+  161:9   error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\Aamir Sohail\Desktop\VARIX 2.0\frontend\src\state\SystemStateProvider.tsx:161:9
+  159 |
+  160 |     useEffect(() => {
+> 161 |         fetchSystemData();
+      |         ^^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  162 |         const interval = setInterval(fetchSystemData, 300000);
+  163 |         return () => clearInterval(interval);
+  164 |     }, [fetchSystemData]);  react-hooks/set-state-in-effect
+
+Γ£û 94 problems (60 errors, 34 warnings)
+

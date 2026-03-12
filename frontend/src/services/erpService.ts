@@ -10,7 +10,7 @@ export interface ERPConnector {
 export const erpService = {
     async getConnectors(): Promise<ERPConnector[]> {
         const response = await apiClient.get("/ingestion/connectors/status");
-        return response.data;
+        return response.data.connectors || [];
     },
 
     async createConnector(data: any) {

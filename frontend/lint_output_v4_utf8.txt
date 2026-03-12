@@ -1,0 +1,159 @@
+﻿
+> frontend@0.1.0 lint
+> eslint
+
+
+C:\Users\Aamir Sohail\Desktop\VARIX 2.0\frontend\src\app\changes\page.tsx
+   12:22  warning  'refresh' is assigned a value but never used  @typescript-eslint/no-unused-vars
+   13:44  error    Unexpected any. Specify a different type      @typescript-eslint/no-explicit-any
+   89:43  error    Unexpected any. Specify a different type      @typescript-eslint/no-explicit-any
+  108:46  error    Unexpected any. Specify a different type      @typescript-eslint/no-explicit-any
+
+C:\Users\Aamir Sohail\Desktop\VARIX 2.0\frontend\src\app\close\page.tsx
+  11:34  warning  'refresh' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  23:40  error    Unexpected any. Specify a different type      @typescript-eslint/no-explicit-any
+  71:41  error    Unexpected any. Specify a different type      @typescript-eslint/no-explicit-any
+  84:46  error    Unexpected any. Specify a different type      @typescript-eslint/no-explicit-any
+  95:40  warning  'item' is defined but never used              @typescript-eslint/no-unused-vars
+  95:46  error    Unexpected any. Specify a different type      @typescript-eslint/no-explicit-any
+
+C:\Users\Aamir Sohail\Desktop\VARIX 2.0\frontend\src\app\controls\page.tsx
+  25:72  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\Aamir Sohail\Desktop\VARIX 2.0\frontend\src\app\dashboard\page.tsx
+  38:9   warning  'reconciliation' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  69:64  error    Unexpected any. Specify a different type             @typescript-eslint/no-explicit-any
+
+C:\Users\Aamir Sohail\Desktop\VARIX 2.0\frontend\src\app\data\connections\page.tsx
+   6:10  warning  'Plug' is defined but never used                @typescript-eslint/no-unused-vars
+  14:12  warning  'syncingId' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\Aamir Sohail\Desktop\VARIX 2.0\frontend\src\app\data\history\page.tsx
+  75:67  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  80:46  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\Aamir Sohail\Desktop\VARIX 2.0\frontend\src\app\data\mappings\page.tsx
+  82:46  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  99:46  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\Aamir Sohail\Desktop\VARIX 2.0\frontend\src\app\data\quality\page.tsx
+  29:72  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\Aamir Sohail\Desktop\VARIX 2.0\frontend\src\app\integrity\page.tsx
+  25:72  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\Aamir Sohail\Desktop\VARIX 2.0\frontend\src\app\login\page.tsx
+  46:23  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\Aamir Sohail\Desktop\VARIX 2.0\frontend\src\app\modules\consolidation\page.tsx
+   91:46  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  102:46  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\Aamir Sohail\Desktop\VARIX 2.0\frontend\src\app\modules\intelligence\page.tsx
+  81:46  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  98:46  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\Aamir Sohail\Desktop\VARIX 2.0\frontend\src\app\modules\reports\page.tsx
+   10:10  warning  'cn' is defined but never used                   @typescript-eslint/no-unused-vars
+   13:22  warning  'refresh' is assigned a value but never used     @typescript-eslint/no-unused-vars
+   14:44  error    Unexpected any. Specify a different type         @typescript-eslint/no-explicit-any
+   15:12  warning  'isFetching' is assigned a value but never used  @typescript-eslint/no-unused-vars
+   86:43  error    Unexpected any. Specify a different type         @typescript-eslint/no-explicit-any
+  103:46  error    Unexpected any. Specify a different type         @typescript-eslint/no-explicit-any
+
+C:\Users\Aamir Sohail\Desktop\VARIX 2.0\frontend\src\app\modules\tax\page.tsx
+   12:13  warning  'integrity' is assigned a value but never used  @typescript-eslint/no-unused-vars
+   89:46  error    Unexpected any. Specify a different type        @typescript-eslint/no-explicit-any
+  100:46  error    Unexpected any. Specify a different type        @typescript-eslint/no-explicit-any
+
+C:\Users\Aamir Sohail\Desktop\VARIX 2.0\frontend\src\app\register\page.tsx
+  46:18  warning  'err' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\Aamir Sohail\Desktop\VARIX 2.0\frontend\src\app\workflows\page.tsx
+  23:40  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  25:44  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  71:41  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  81:63  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  86:46  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  98:46  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\Aamir Sohail\Desktop\VARIX 2.0\frontend\src\components\EvidencePanel.tsx
+   5:33  warning  'Trash2' is defined but never used        @typescript-eslint/no-unused-vars
+  14:48  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  57:23  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\Aamir Sohail\Desktop\VARIX 2.0\frontend\src\components\authority\ArchitectureNode.tsx
+  5:32  warning  'AlertCircle' is defined but never used   @typescript-eslint/no-unused-vars
+  5:45  warning  'CheckCircle2' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\Aamir Sohail\Desktop\VARIX 2.0\frontend\src\components\dashboard\ContextPanel.tsx
+   4:45  warning  'Terminal' is defined but never used                 @typescript-eslint/no-unused-vars
+  12:11  error    Unexpected any. Specify a different type             @typescript-eslint/no-explicit-any
+  19:12  warning  'isPosting' is assigned a value but never used       @typescript-eslint/no-unused-vars
+  20:12  warning  'isEscalating' is assigned a value but never used    @typescript-eslint/no-unused-vars
+  24:11  warning  'handleComment' is assigned a value but never used   @typescript-eslint/no-unused-vars
+  40:11  warning  'handleEscalate' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\Aamir Sohail\Desktop\VARIX 2.0\frontend\src\components\dashboard\ModuleWorkspace.tsx
+   4:10  warning  'LucideIcon' is defined but never used        @typescript-eslint/no-unused-vars
+   4:32  warning  'Printer' is defined but never used           @typescript-eslint/no-unused-vars
+  25:19  error    Unexpected any. Specify a different type      @typescript-eslint/no-explicit-any
+  26:16  error    Unexpected any. Specify a different type      @typescript-eslint/no-explicit-any
+  27:24  error    Unexpected any. Specify a different type      @typescript-eslint/no-explicit-any
+  28:15  error    Unexpected any. Specify a different type      @typescript-eslint/no-explicit-any
+  38:5   warning  'filters' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  40:52  error    Unexpected any. Specify a different type      @typescript-eslint/no-explicit-any
+  45:34  error    Unexpected any. Specify a different type      @typescript-eslint/no-explicit-any
+
+C:\Users\Aamir Sohail\Desktop\VARIX 2.0\frontend\src\components\dashboard\OperationalTable.tsx
+   4:40  warning  'User' is defined but never used          @typescript-eslint/no-unused-vars
+  10:22  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  10:32  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  15:11  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  16:23  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\Aamir Sohail\Desktop\VARIX 2.0\frontend\src\components\dashboard\WorkflowQueue.tsx
+  4:49  warning  'CheckCircle' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\Aamir Sohail\Desktop\VARIX 2.0\frontend\src\components\enterprise\IssueTable.tsx
+  5:44  warning  'CheckCircle2' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\Aamir Sohail\Desktop\VARIX 2.0\frontend\src\components\layout\AppShell.tsx
+  6:10  warning  'cn' is defined but never used         @typescript-eslint/no-unused-vars
+  9:8   warning  'apiClient' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\Aamir Sohail\Desktop\VARIX 2.0\frontend\src\components\layout\Sidebar.tsx
+  79:29  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\Aamir Sohail\Desktop\VARIX 2.0\frontend\src\components\layout\TopBar.tsx
+  5:10  warning  'cn' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\Aamir Sohail\Desktop\VARIX 2.0\frontend\src\components\modals\TestImportModal.tsx
+  17:20  warning  'setPeriod' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  44:19  warning  'res' is assigned a value but never used        @typescript-eslint/no-unused-vars
+  68:25  error    Unexpected any. Specify a different type        @typescript-eslint/no-explicit-any
+
+C:\Users\Aamir Sohail\Desktop\VARIX 2.0\frontend\src\services\auditService.ts
+  10:14  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\Aamir Sohail\Desktop\VARIX 2.0\frontend\src\services\erpService.ts
+  16:33  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\Aamir Sohail\Desktop\VARIX 2.0\frontend\src\services\governanceService.ts
+  15:12  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\Aamir Sohail\Desktop\VARIX 2.0\frontend\src\services\reconciliationService.ts
+  13:30  error    Unexpected any. Specify a different type       @typescript-eslint/no-explicit-any
+  14:15  warning  'response' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  20:33  error    Unexpected any. Specify a different type       @typescript-eslint/no-explicit-any
+
+C:\Users\Aamir Sohail\Desktop\VARIX 2.0\frontend\src\state\SystemStateProvider.tsx
+   10:33  warning  'ReconciliationRun' is defined but never used  @typescript-eslint/no-unused-vars
+   23:18  error    Unexpected any. Specify a different type       @typescript-eslint/no-explicit-any
+   27:15  error    Unexpected any. Specify a different type       @typescript-eslint/no-explicit-any
+   94:60  error    Unexpected any. Specify a different type       @typescript-eslint/no-explicit-any
+   95:99  error    Unexpected any. Specify a different type       @typescript-eslint/no-explicit-any
+  140:23  error    Unexpected any. Specify a different type       @typescript-eslint/no-explicit-any
+
+Γ£û 88 problems (56 errors, 32 warnings)
+

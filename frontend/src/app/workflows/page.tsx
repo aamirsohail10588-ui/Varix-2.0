@@ -73,7 +73,7 @@ export default function WorkflowsPage() {
                         workflow: "Financial Close",
                         priority: t.priority || "Medium",
                         owner: t.assignedRoleId || "Unassigned",
-                        date: new Date(t.createdAt || Date.now()).toLocaleDateString(),
+                        date: t.createdAt ? new Date(t.createdAt).toLocaleDateString() : "Pending",
                         status: t.status,
                         name: t.name || t.description
                     }))}

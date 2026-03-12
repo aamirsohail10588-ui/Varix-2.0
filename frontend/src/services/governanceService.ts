@@ -18,12 +18,12 @@ export interface CloseCycle {
 export const governanceService = {
     async getViolations(): Promise<GovernanceViolation[]> {
         const response = await apiClient.get("/governance/violations");
-        return response.data;
+        return response.data.violations || [];
     },
 
     async getCurrentCycle(): Promise<CloseCycle | null> {
         const response = await apiClient.get("/governance/cycles/current");
-        return response.data;
+        return response.data.cycle || null;
     },
 
     async startCycle(period: string) {
