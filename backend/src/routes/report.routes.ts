@@ -18,7 +18,10 @@ router.post("/generate", authenticateToken, requireTenant, async (req: AuthReque
             (format || "PDF").toUpperCase() as ExportFormat
         );
 
-        const contentType = format === "CSV" ? "text/csv" : format === "XLSX" ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" : "application/pdf";
+        const contentType =
+            format === "CSV" ? "text/csv" :
+                format === "XLSX" ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" :
+                    "application/pdf";
 
         res.setHeader("Content-Type", contentType);
         res.setHeader("Content-Disposition", `attachment; filename=${fileName}`);

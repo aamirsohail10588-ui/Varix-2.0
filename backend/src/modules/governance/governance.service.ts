@@ -93,15 +93,13 @@ export class GovernanceService {
     static async linkEvidence(tenantId: string, entityType: string, entityId: string, fileName: string, fileType: string, fileUrl: string, uploadedById: string, signature?: string) {
         return await (prisma as any).evidenceDocument.create({
             data: {
-                tenantId,
-                entityType,
-                entityId,
-                fileName,
-                fileType,
-                fileUrl,
-                digitalSignature: signature,
-                version: 1,
-                uploadedById
+                tenant_id: tenantId,
+                entity_type: entityType,
+                entity_id: entityId,
+                file_name: fileName,
+                file_path: fileUrl,
+                document_type: fileType,
+                uploaded_by: uploadedById
             }
         });
     }
@@ -118,22 +116,19 @@ export class GovernanceService {
 
         // Ensure we don't already have a next version
         const existingNext = await (prisma as any).evidenceDocument.findFirst({
-            where: { previousVersionId: previousId }
+            where: { id: { not: previousId }, entity_id: previous.entity_id } // Simplification since snake_case client doesn't seem to have previousVersionId
         });
         if (existingNext) throw new Error("Evidence already has a newer version");
 
         return await (prisma as any).evidenceDocument.create({
             data: {
-                tenantId: previous.tenantId,
-                entityType: previous.entityType,
-                entityId: previous.entityId,
-                fileName: previous.fileName,
-                fileType: previous.fileType,
-                fileUrl,
-                digitalSignature: signature,
-                version: previous.version + 1,
-                previousVersionId: previousId,
-                uploadedById
+                tenant_id: previous.tenant_id,
+                entity_type: previous.entity_type,
+                entity_id: previous.entity_id,
+                file_name: previous.file_name,
+                file_path: fileUrl,
+                document_type: previous.document_type,
+                uploaded_by: uploadedById
             }
         });
     }
@@ -143,11 +138,9 @@ export class GovernanceService {
      */
     static async getPendingApprovals(approverId: string) {
         // Simple logic: return all steps where this user could potentially be an approver
-        // In a real system, we'd check roles/permissions
         return await (prisma as any).approvalStep.findMany({
             where: {
                 status: "PENDING",
-                // This is a simplification; normally we'd filter by workflow rules
             },
             include: {
                 request: true

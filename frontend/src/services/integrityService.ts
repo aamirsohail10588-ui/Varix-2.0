@@ -3,8 +3,15 @@ import apiClient from "./apiClient";
 export interface IntegrityScore {
     final_score: number;
     integrity_component: number;
-    risk_component: number;
-    anomaly_component: number;
+    governance_component: number;
+    stability_component: number;
+    performance_component: number;
+    total_violations: number;
+    journal_mismatch_rate: number;
+    duplicate_invoice_rate: number;
+    override_frequency: number;
+    control_violation_density: number;
+    evidence_coverage_ratio: number;
     timestamp: string;
 }
 

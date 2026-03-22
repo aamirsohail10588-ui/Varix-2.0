@@ -35,6 +35,9 @@ export class AnalyticsService {
         const incompleteCloseTasks = closeTasks.filter((t: any) => t.status !== "COMPLETED").length;
         const closeRisk = closeTasks.length > 0 ? Math.min(100, (incompleteCloseTasks / closeTasks.length) * 100) : 0;
 
+        const avgRisk = (journalRisk + taxRisk + overrideRisk + closeRisk) / 4;
+        const complianceScore = parseFloat(Math.max(0, 100 - avgRisk).toFixed(1));
+
         return await (prisma as any).riskMetric.upsert({
             where: { tenant_id_period: { tenant_id: tenantId, period } },
             update: {
@@ -42,6 +45,7 @@ export class AnalyticsService {
                 tax_risk: parseFloat(taxRisk.toFixed(1)),
                 override_risk: parseFloat(overrideRisk.toFixed(1)),
                 close_risk: parseFloat(closeRisk.toFixed(1)),
+                compliance_score: complianceScore,
                 calculated_at: new Date()
             },
             create: {
@@ -50,7 +54,8 @@ export class AnalyticsService {
                 journal_risk: parseFloat(journalRisk.toFixed(1)),
                 tax_risk: parseFloat(taxRisk.toFixed(1)),
                 override_risk: parseFloat(overrideRisk.toFixed(1)),
-                close_risk: parseFloat(closeRisk.toFixed(1))
+                close_risk: parseFloat(closeRisk.toFixed(1)),
+                compliance_score: complianceScore
             }
         });
     }
@@ -60,7 +65,13 @@ export class AnalyticsService {
             where: { tenant_id: tenantId, period },
             orderBy: { calculated_at: "desc" }
         });
-        return riskMetric || { journal_risk: 0, tax_risk: 0, override_risk: 0, close_risk: 0 };
+        return riskMetric || {
+            journal_risk: 0,
+            tax_risk: 0,
+            override_risk: 0,
+            close_risk: 0,
+            compliance_score: 100
+        };
     }
 
     async getControlViolations(tenantId: string) {
@@ -107,12 +118,9 @@ export class AnalyticsService {
             PERFORMANCE: 0.30
         };
 
-        // 1. Data Integrity (20%)
         const integrityData = await this.calculateIntegrityScore(tenantId);
         const integrity_component = integrityData.score;
 
-        // 2. Governance Compliance (20%)
-        // Percentage of approved requests vs total requests for the period
         const totalRequests = await (prisma as any).approvalRequest.count({
             where: { tenantId, createdAt: { gte: new Date(`${period.split('-')[0]}-01-01`) } }
         });
@@ -121,8 +129,6 @@ export class AnalyticsService {
         });
         const governance_component = totalRequests === 0 ? 100 : (approvedRequests / totalRequests) * 100;
 
-        // 3. Financial Stability (30%)
-        // Simplified Current Ratio: Asset accounts vs Liability accounts
         const assetAccounts = await prisma.account.findMany({
             where: { tenantId, type: "ASSET" },
             select: { id: true }
@@ -146,11 +152,8 @@ export class AnalyticsService {
 
         const assetTotal = Math.max(0, parseFloat(assets._sum.debit_amount?.toString() || "0") - parseFloat(assets._sum.credit_amount?.toString() || "0"));
         const liabilityTotal = Math.max(0, parseFloat(liabilities._sum.credit_amount?.toString() || "0") - parseFloat(liabilities._sum.debit_amount?.toString() || "0"));
+        const stability_component = liabilityTotal === 0 ? 100 : Math.min(100, (assetTotal / liabilityTotal) * 50);
 
-        const stability_component = liabilityTotal === 0 ? 100 : Math.min(100, (assetTotal / liabilityTotal) * 50); // Scale 2.0 ratio to 100
-
-        // 4. FP&A Performance (30%)
-        // Accuracy of actuals vs budget
         const { VarianceService } = await import("../intelligence/variance.service");
         const reports = await VarianceService.getFullReport(tenantId, parseInt(period.split('-')[0]));
         let totalVarianceAcc = 0;
@@ -165,7 +168,7 @@ export class AnalyticsService {
             (performance_component * WEIGHTS.PERFORMANCE)
         );
 
-        return (prisma as any).financialHealthIndex.upsert({
+        const record = await (prisma as any).financialHealthIndex.upsert({
             where: { tenant_id_period: { tenant_id: tenantId, period } },
             update: {
                 integrity_component,
@@ -185,6 +188,12 @@ export class AnalyticsService {
                 final_score
             }
         });
+
+        return {
+            ...record,
+            ...integrityData,
+            timestamp: record.calculated_at
+        };
     }
 
     async getFHIHistory(tenantId: string, limit = 12) {
@@ -223,7 +232,7 @@ export class AnalyticsService {
         const tenantActuals: Record<string, number> = {
             duplicate_invoice_rate: integrity.duplicate_invoice_rate,
             journal_mismatch_rate: integrity.journal_mismatch_rate,
-            control_violation_density: 0.4,
+            control_violation_density: integrity.control_violation_density,
             close_cycle_duration: 5,
             evidence_coverage_ratio: integrity.score,
             override_frequency: integrity.override_frequency
@@ -234,8 +243,9 @@ export class AnalyticsService {
             const m = latestMetrics.find(lm => lm.metric_name === name);
             const median = m?.percentile_50 || fallbackMedians[name];
             const p75 = m?.percentile_75 || median * 1.5;
-
-            let isAnomaly = (name === 'evidence_coverage_ratio') ? actual < (median * 0.7) : (actual > p75 && p75 > 0);
+            const isAnomaly = name === 'evidence_coverage_ratio'
+                ? actual < (median * 0.7)
+                : (actual > p75 && p75 > 0);
 
             return {
                 metric_name: name,
@@ -272,12 +282,29 @@ export class AnalyticsService {
             where: { controlRun: { tenantId }, severity: { in: ['CRITICAL', 'BLOCKER', 'ERROR', 'HIGH'] } }
         });
 
-        const journal_mismatch_rate = (mismatchCount / safeVolume);
-        const duplicate_invoice_rate = (dupeCount / Math.max(1, totalTransactions / 2));
-        const override_frequency = (overridesCount / Math.max(1, totalViolations));
-        const control_violation_density = (densityCount / safeVolume);
+        const journal_mismatch_rate = mismatchCount / safeVolume;
+        const duplicate_invoice_rate = dupeCount / Math.max(1, totalTransactions / 2);
+        const override_frequency = overridesCount / Math.max(1, totalViolations);
+        const control_violation_density = densityCount / safeVolume;
 
-        const score = Math.max(0, Math.min(100, 100 - (journal_mismatch_rate * 25) - (duplicate_invoice_rate * 20) - (override_frequency * 15) - (control_violation_density * 20)));
+        const violationsWithEvidence = await prisma.controlResult.count({
+            where: {
+                controlRun: { tenantId },
+                overrides: { isNot: null }
+            }
+        }).catch(() => 0);
+
+        const evidence_coverage_ratio = totalViolations > 0
+            ? parseFloat(((violationsWithEvidence / totalViolations) * 100).toFixed(1))
+            : 100;
+
+        const score = Math.max(0, Math.min(100,
+            100
+            - (journal_mismatch_rate * 25)
+            - (duplicate_invoice_rate * 20)
+            - (override_frequency * 15)
+            - (control_violation_density * 20)
+        ));
 
         return {
             score: parseFloat(score.toFixed(1)),
@@ -286,18 +313,22 @@ export class AnalyticsService {
             duplicate_invoice_rate: parseFloat((duplicate_invoice_rate * 100).toFixed(2)),
             override_frequency: parseFloat((override_frequency * 100).toFixed(2)),
             control_violation_density: parseFloat((control_violation_density * 100).toFixed(2)),
-            evidence_coverage_ratio: 85
+            evidence_coverage_ratio
         };
     }
 
     async generateNetworkBenchmarks() {
         console.log("[Network] Generating industry benchmarks...");
         const tenants = await prisma.tenant.findMany({ select: { id: true, industry: true } });
-        const groups: Record<string, any> = {};
+        const groups: Record<string, Record<string, number[]>> = {};
 
         for (const tenant of tenants) {
             const ind = tenant.industry || "Technology";
-            if (!groups[ind]) groups[ind] = { duplicate_invoice_rate: [], journal_mismatch_rate: [], override_frequency: [] };
+            if (!groups[ind]) groups[ind] = {
+                duplicate_invoice_rate: [],
+                journal_mismatch_rate: [],
+                override_frequency: []
+            };
 
             const integrity = await this.calculateIntegrityScore(tenant.id);
             groups[ind].duplicate_invoice_rate.push(integrity.duplicate_invoice_rate);
@@ -307,10 +338,10 @@ export class AnalyticsService {
 
         for (const [industry, metrics] of Object.entries(groups)) {
             const timestamp = new Date();
-            for (const [metricName, values] of Object.entries(metrics as any)) {
-                if ((values as any).length === 0) continue;
-                const sorted = (values as any).sort((a: number, b: number) => a - b);
-                const avg = sorted.reduce((a: number, b: number) => a + b, 0) / sorted.length;
+            for (const [metricName, values] of Object.entries(metrics)) {
+                if (values.length === 0) continue;
+                const sorted = [...values].sort((a, b) => a - b);
+                const avg = sorted.reduce((a, b) => a + b, 0) / sorted.length;
 
                 await prisma.networkMetric.create({
                     data: {

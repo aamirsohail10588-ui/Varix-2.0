@@ -2,9 +2,10 @@ import apiClient from "./apiClient";
 
 export interface ERPConnector {
     id: string;
-    type: "ZOHO" | "TALLY" | "SAP";
-    status: "CONNECTED" | "DISCONNECTED" | "SYNCING" | "ERROR";
-    last_sync?: string;
+    connector_type: string;
+    status: string;
+    last_sync_at?: string;
+    sync_frequency: string;
 }
 
 export const erpService = {
@@ -19,5 +20,9 @@ export const erpService = {
 
     async syncConnector(connectorId: string) {
         return apiClient.post("/ingestion/connectors/sync", { connectorId });
+    },
+
+    async triggerSync(connectorId: string) {
+        return this.syncConnector(connectorId);
     }
 };

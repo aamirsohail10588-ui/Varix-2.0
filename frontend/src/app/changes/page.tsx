@@ -6,10 +6,10 @@ import SystemActionBar from "@/components/enterprise/SystemActionBar";
 import MetricTile from "@/components/enterprise/MetricTile";
 import OperationalTable from "@/components/enterprise/OperationalTable";
 import apiClient from "@/services/apiClient";
-import { RefreshCcw, FileText, History, Zap } from "lucide-react";
+import { RefreshCcw, FileText, History, Zap, ShieldCheck } from "lucide-react";
 
 export default function ChangesPage() {
-    const { loading, refresh } = useSystemState();
+    const { loading } = useSystemState();
     const [changes, setChanges] = useState<any[]>([]);
     const [isFetching, setIsFetching] = useState(false);
 
@@ -33,18 +33,51 @@ export default function ChangesPage() {
         return (
             <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
                 <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-brand"></div>
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest italic">Tracing Financial Lineage...</span>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest italic">
+                    Tracing Financial Lineage...
+                </span>
             </div>
         );
     }
+
+    // Derive high-risk count from real change data instead of hardcoding "14"
+    const highRiskCount = changes.filter(
+        (c: any) =>
+            c.risk_level === "HIGH" ||
+            c.change_type === "OVERRIDE" ||
+            c.change_type === "DELETION" ||
+            c.change_type === "REVERSAL"
+    ).length;
+
+    const tableData = changes.map((c: any) => ({
+        id: c.id.substring(0, 8).toUpperCase(),
+        rawId: c.id,
+        entity: c.entity_type || "System",
+        account: c.entity_id || "Global Config",
+        type: c.display_label || c.change_type || "—",
+        impact: "Canonical Ledger",
+        user: c.user?.name || c.actor || "System",
+        date: new Date(c.detected_at).toLocaleDateString(),
+        status: "Resolved",
+    }));
 
     return (
         <div className="space-y-6">
             <SystemActionBar
                 title="Financial Changes"
                 actions={[
-                    { label: "Refresh Lineage", icon: RefreshCcw, onClick: fetchChanges, disabled: isFetching },
-                    { label: "Audit Log", icon: FileText, onClick: () => console.log("Audit...") }
+                    {
+                        label: "Refresh Lineage",
+                        icon: RefreshCcw,
+                        onClick: fetchChanges,
+                        disabled: isFetching,
+                        variant: "primary",
+                    },
+                    {
+                        label: "Audit Log",
+                        icon: FileText,
+                        onClick: () => console.log("Audit..."),
+                    },
                 ]}
             />
 
@@ -58,10 +91,9 @@ export default function ChangesPage() {
                     icon={History}
                 />
                 <MetricTile
-                    title="High-Risk Variance"
-                    value="14"
-                    trend={-12.5}
-                    status="error"
+                    title="High-Risk Events"
+                    value={highRiskCount}
+                    status={highRiskCount > 0 ? "error" : "success"}
                     icon={Zap}
                 />
                 <MetricTile
@@ -72,51 +104,49 @@ export default function ChangesPage() {
                     icon={ShieldCheck}
                 />
                 <MetricTile
-                    title="Avg. Resolution"
-                    value="4.2"
-                    trend={-2.1}
+                    title="Fetching"
+                    value={isFetching ? "..." : "Live"}
                     status="success"
-                    suffix="hrs"
                     icon={RefreshCcw}
                 />
             </div>
 
             <div className="bg-white border border-slate-100 rounded-xl overflow-hidden shadow-sm">
                 <div className="px-4 py-3 border-b border-slate-50 bg-slate-50/30">
-                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Global Lineage Stream</span>
+                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                        Global Lineage Stream
+                    </span>
                 </div>
-                <OperationalTable
-                    data={changes.map((c: any) => ({
-                        id: c.id.substring(0, 8).toUpperCase(),
-                        entity: c.entity_type || "System",
-                        account: c.entity_id || "Global Config",
-                        type: c.display_label || c.change_type,
-                        impact: "Canonical Ledger",
-                        user: "System",
-                        date: new Date(c.detected_at).toLocaleDateString(),
-                        status: "Resolved"
-                    }))}
-                    columns={[
-                        { header: "Lineage ID", accessor: "id" },
-                        { header: "Entity", accessor: "entity" },
-                        { header: "Reference", accessor: "account" },
-                        { header: "Action", accessor: "type", className: "font-bold text-slate-800" },
-                        { header: "Impact Domain", accessor: "impact" },
-                        { header: "Attribution", accessor: "user" },
-                        {
-                            header: "State",
-                            accessor: (item: any) => (
-                                <span className="px-2 py-0.5 bg-emerald-50 text-emerald-600 text-[9px] font-black rounded uppercase tracking-tighter">
-                                    {item.status}
-                                </span>
-                            )
-                        }
-                    ]}
-                />
+                {tableData.length === 0 ? (
+                    <div className="p-8 text-center text-slate-400 text-sm">
+                        No change events detected.
+                    </div>
+                ) : (
+                    <OperationalTable
+                        data={tableData}
+                        columns={[
+                            { header: "Lineage ID", accessor: "id" as any },
+                            { header: "Entity", accessor: "entity" as any },
+                            { header: "Reference", accessor: "account" as any },
+                            {
+                                header: "Action",
+                                accessor: "type" as any,
+                                className: "font-bold text-slate-800",
+                            },
+                            { header: "Impact Domain", accessor: "impact" as any },
+                            { header: "Attribution", accessor: "user" as any },
+                            {
+                                header: "State",
+                                accessor: (item: any) => (
+                                    <span className="px-2 py-0.5 bg-emerald-50 text-emerald-600 text-[9px] font-black rounded uppercase tracking-tighter">
+                                        {item.status}
+                                    </span>
+                                ),
+                            },
+                        ]}
+                    />
+                )}
             </div>
         </div>
     );
 }
-
-// Add ShieldCheck import
-import { ShieldCheck } from "lucide-react";

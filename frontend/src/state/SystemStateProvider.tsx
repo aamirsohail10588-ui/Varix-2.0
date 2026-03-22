@@ -25,6 +25,7 @@ interface SystemState {
     };
     reconciliation: {
         runs: any[];
+        summary: any | null;
     };
     integrity: IntegrityScore;
     governance: {
@@ -54,8 +55,21 @@ export function SystemStateProvider({ children }: { children: React.ReactNode })
         health: null,
         ledger: null,
         ingestion: { history: [], queueDepth: 0 },
-        reconciliation: { runs: [] },
-        integrity: { final_score: 0, integrity_component: 0, risk_component: 0, anomaly_component: 0, timestamp: new Date().toISOString() },
+        reconciliation: { runs: [], summary: null },
+        integrity: {
+            final_score: 0,
+            integrity_component: 0,
+            governance_component: 0,
+            stability_component: 0,
+            performance_component: 0,
+            total_violations: 0,
+            journal_mismatch_rate: 0,
+            duplicate_invoice_rate: 0,
+            override_frequency: 0,
+            control_violation_density: 0,
+            evidence_coverage_ratio: 0,
+            timestamp: new Date().toISOString()
+        },
         governance: { violations: [], currentCycle: null },
         anomalies: { tax_risk: 0, journal_risk: 0, reconciliation_gap: 0, compliance_score: 0 },
         erp: { connectors: [] },
@@ -89,6 +103,7 @@ export function SystemStateProvider({ children }: { children: React.ReactNode })
                 auditService.getRecentLogs(),
                 fpnaService.getBenchmarks(),
                 fpnaService.getSummary(),
+                reconciliationService.getSummary(),
             ]);
 
             const getValue = (index: number, defaultValue: any) =>
@@ -121,8 +136,21 @@ export function SystemStateProvider({ children }: { children: React.ReactNode })
                 },
                 reconciliation: {
                     runs: getValue(8, []),
+                    summary: getValue(12, null),
                 },
-                integrity: getValue(6, { final_score: 0, integrity_component: 0, risk_component: 0, anomaly_component: 0 }),
+                integrity: getValue(6, {
+                    final_score: 0,
+                    integrity_component: 0,
+                    governance_component: 0,
+                    stability_component: 0,
+                    performance_component: 0,
+                    total_violations: 0,
+                    journal_mismatch_rate: 0,
+                    duplicate_invoice_rate: 0,
+                    override_frequency: 0,
+                    control_violation_density: 0,
+                    evidence_coverage_ratio: 0
+                }),
                 governance: {
                     violations: getValue(3, []),
                     currentCycle: getValue(4, null),
@@ -144,8 +172,21 @@ export function SystemStateProvider({ children }: { children: React.ReactNode })
                 health: null,
                 ledger: null,
                 ingestion: { history: [], queueDepth: 0 },
-                reconciliation: { runs: [] },
-                integrity: { final_score: 0, integrity_component: 0, risk_component: 0, anomaly_component: 0, timestamp: new Date().toISOString() },
+                reconciliation: { runs: [], summary: null },
+                integrity: {
+                    final_score: 0,
+                    integrity_component: 0,
+                    governance_component: 0,
+                    stability_component: 0,
+                    performance_component: 0,
+                    total_violations: 0,
+                    journal_mismatch_rate: 0,
+                    duplicate_invoice_rate: 0,
+                    override_frequency: 0,
+                    control_violation_density: 0,
+                    evidence_coverage_ratio: 0,
+                    timestamp: new Date().toISOString()
+                },
                 governance: { violations: [], currentCycle: null },
                 anomalies: { tax_risk: 0, journal_risk: 0, reconciliation_gap: 0, compliance_score: 0 },
                 erp: { connectors: [] },

@@ -2,16 +2,27 @@ import apiClient from "./apiClient";
 
 export interface GovernanceViolation {
     id: string;
-    type: string;
-    severity: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
-    description: string;
+    control_id: string;
+    severity: string;
+    violation_message: string;
     created_at: string;
+    status?: string;
+    controlSpec: {
+        id: string;
+        name: string;
+        description: string | null;
+        ruleType: string;
+        severity: string;
+    };
 }
 
 export interface CloseCycle {
     id: string;
-    period: string;
-    status: "OPEN" | "CLOSED";
+    tenantId: string;
+    name: string;
+    startDate: string;
+    endDate: string;
+    status: string;
     tasks: any[];
 }
 
@@ -26,7 +37,11 @@ export const governanceService = {
         return response.data.cycle || null;
     },
 
-    async startCycle(period: string) {
-        return apiClient.post("/governance/cycles/start", { period });
+    async startCycle(period?: string) {
+        return apiClient.post("/governance/cycles/start", { period: period || new Date().toISOString().slice(0, 7) });
+    },
+
+    async approveTask(taskId: string, status: "APPROVED" | "REJECTED", comments?: string) {
+        return apiClient.post(`/governance/tasks/${taskId}/approve`, { status, comments });
     }
 };
