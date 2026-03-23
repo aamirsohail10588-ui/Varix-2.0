@@ -1,5 +1,5 @@
-import { calculateNormalizedIntegrity } from "./src/services/integrity.service";
-import prisma from "./src/lib/prisma";
+import { analyticsService } from "./src/modules/analytics/analytics.service";
+import prisma from "./src/infrastructure/prisma";
 
 async function runTest() {
     try {
@@ -8,7 +8,7 @@ async function runTest() {
         if (!tenant) throw new Error("No tenant found!");
 
         console.log(`2. Calculating Mathematically Scaled Integrity for Tenant ${tenant.id}...`);
-        const metrics = await calculateNormalizedIntegrity(tenant.id);
+        const metrics = await analyticsService.calculateIntegrityScore(tenant.id);
 
         console.log("Normalized Metrics Finalized Result:");
         console.dir(metrics, { depth: null });

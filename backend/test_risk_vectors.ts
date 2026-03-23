@@ -1,5 +1,5 @@
-import { calculateRiskMetrics } from "./src/services/calculate_risk_metrics.service";
-import prisma from "./src/lib/prisma";
+import { analyticsService } from "./src/modules/analytics/analytics.service";
+import prisma from "./src/infrastructure/prisma";
 
 async function verify() {
     try {
@@ -11,7 +11,7 @@ async function verify() {
         const period = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 
         console.log(`2. Calculating Mathematically Scaled Sub-Risks for Tenant ${tenant.id}...`);
-        const metrics = await calculateRiskMetrics(tenant.id, period);
+        const metrics = await analyticsService.calculatePeriodRisk(tenant.id, period);
 
         console.log("Normalized Risk Vector Result:");
         console.dir(metrics, { depth: null });

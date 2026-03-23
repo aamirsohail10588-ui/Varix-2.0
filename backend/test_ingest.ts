@@ -1,5 +1,5 @@
-import { processCsvUpload } from "./src/services/ingestion.service";
-import prisma from "./src/lib/prisma";
+import { ingestionService } from "./src/modules/ingestion/ingestion.service";
+import prisma from "./src/infrastructure/prisma";
 import fs from "fs";
 
 const csvData = `Account,Debit Amount,Credit Amount,Currency,Transaction Date,invoice_number,voucher_number
@@ -27,7 +27,7 @@ async function runTest() {
         });
 
         console.log(`3. Executing Canonical Ingestion Pipeline (${batch.id})...`);
-        await processCsvUpload('mock_ingest.csv', 'mock_ingest.csv', tenant.id, batch.id);
+        await ingestionService.processCsv('mock_ingest.csv', tenant.id, batch.id);
 
         console.log("4. Validating Ledger Entries...");
         const entries = await prisma.ledgerEntry.findMany({ where: { snapshot_id: { not: null } } });

@@ -1,6 +1,7 @@
+/// <reference types="node" />
 import { PrismaClient } from "@prisma/client";
-import { syncConnector } from "./src/services/connector.service";
-import fs from "fs";
+import { ingestionService } from "./src/modules/ingestion/ingestion.service";
+import fs from "node:fs";
 
 const prisma = new PrismaClient();
 
@@ -16,7 +17,7 @@ async function main() {
         }
 
         try {
-            await syncConnector(connectors[0].id);
+            await ingestionService.syncConnector(connectors[0].id, connectors[0].tenant_id);
         } catch (e: any) {
             fs.writeFileSync("zoho_error_log.json", JSON.stringify({
                 message: e.message,

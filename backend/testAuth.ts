@@ -1,3 +1,6 @@
+import { generateDemoData } from "./src/services/demo.service";
+import prisma from "./src/infrastructure/prisma";
+
 async function run() {
     try {
         console.log("Testing auth/login...");
@@ -14,3 +17,5 @@ async function run() {
     }
 }
 run();
+
+export { };

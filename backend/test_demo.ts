@@ -1,5 +1,5 @@
 import { generateDemoData } from "./src/services/demo.service";
-import prisma from "./src/lib/prisma";
+import prisma from "./src/infrastructure/prisma";
 
 async function runTest() {
     try {

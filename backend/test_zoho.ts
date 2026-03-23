@@ -1,6 +1,5 @@
 import { PrismaClient } from "@prisma/client";
-import { syncConnector } from "./src/services/connector.service";
-import { executeControls } from "./src/services/controls.service";
+import { ingestionService } from "./src/modules/ingestion/ingestion.service";
 
 const prisma = new PrismaClient();
 
@@ -34,7 +33,7 @@ async function main() {
 
         // Test the ingestion wrapper syncConnector
         console.log("Triggering syncConnector...");
-        const result = await syncConnector(connector.id);
+        const result = await ingestionService.syncConnector(connector.id, tenant.id);
 
         console.log("Sync Complete:", result);
     } catch (e: any) {

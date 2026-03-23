@@ -1,5 +1,5 @@
-import prisma from "./src/lib/prisma";
-import { calculatePeriodRisk } from "./src/services/risk.service";
+import prisma from "./src/infrastructure/prisma";
+import { analyticsService } from "./src/modules/analytics/analytics.service";
 
 async function run() {
     const tenant = await prisma.tenant.findFirst();
@@ -10,7 +10,7 @@ async function run() {
 
     console.log(`Recalibrating Global Risk Scores explicitly for Tenant ${tenant.id} at Period ${period}...`);
 
-    const risk = await calculatePeriodRisk(tenant.id, period);
+    const risk = await analyticsService.calculatePeriodRisk(tenant.id, period);
     console.log("Risk Scores successfully updated natively: ", risk);
 
     process.exit(0);
