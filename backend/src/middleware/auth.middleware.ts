@@ -21,11 +21,11 @@ export const authenticateToken = (
     const authHeader = req.headers["authorization"];
     const token = authHeader && authHeader.split(" ")[1];
 
-    if (!token) return res.sendStatus(401);
+    if (!token) return res.status(401).json({ error: "Unauthorized: No token provided" });
 
     jwt.verify(token, JWT_SECRET, (err, decoded) => {
         if (err) {
-            return res.sendStatus(401); // Return 401 so frontend can redirect to login
+            return res.status(401).json({ error: "Unauthorized: Invalid or expired token" });
         }
         const decodedUser = decoded as { userId: string; tenantId?: string; role?: string };
 

@@ -1,15 +1,13 @@
 import { Worker } from "bullmq";
 import IORedis from "ioredis";
+import { config } from "../infrastructure/config";
 import { ingestionService } from "../modules/ingestion/ingestion.service";
 import { csvIngestionPipeline } from "../pipelines/csvIngestion.pipeline";
 import { ingestionQueue } from "../infrastructure/queue";
 
-const connection = new IORedis(
-    process.env.REDIS_URL || "redis://127.0.0.1:6379",
-    {
-        maxRetriesPerRequest: null
-    }
-);
+const connection = new IORedis(config.redisUrl, {
+    maxRetriesPerRequest: null
+});
 
 const worker = new Worker(
     "ingestion",

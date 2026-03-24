@@ -33,13 +33,16 @@ const app = express();
 
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 1000
+    max: 200
 });
 
 app.use("/api", limiter);
 
 app.use(helmet());
-app.use(cors());
+app.use(cors({
+    origin: process.env.FRONTEND_URL || "http://localhost:3000",
+    credentials: true,
+}));
 app.use(express.json({ limit: "20mb" }));
 
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
@@ -91,16 +94,20 @@ if (process.env.NODE_ENV !== 'test') {
         }
     });
 
-    require("./jobs/cron"); // ERP Sync Worker
 }
 
-app.get("/health", (req, res) => {
-    res.json({ status: "ok", message: "VARIX API is running" });
+app.get("/health", async (req, res) => {
+    try {
+        await prisma.$queryRaw`SELECT 1`;
+        res.json({ status: "ok", message: "VARIX API is running", db: "connected" });
+    } catch {
+        res.status(503).json({ status: "degraded", message: "Database unreachable", db: "disconnected" });
+    }
 });
 
 app.use((err: any, req: any, res: any, next: any) => {
-    console.error("GLOBAL ERROR:", err.message);
-    res.status(500).json({ error: "Internal Server Error" });
+    console.error("GLOBAL ERROR:", err.message, err.stack);
+    res.status(err.status || 500).json({ error: err.message || "Internal Server Error" });
 });
 
 export default app;

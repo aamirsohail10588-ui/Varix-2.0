@@ -73,7 +73,12 @@ const server = app.listen(port, async () => {
       )
 `);
 
+        const stagingTablePattern = /^staging_[0-9a-f]+$/;
         for (const { tablename } of tables) {
+            if (!stagingTablePattern.test(tablename)) {
+                console.warn(`[Startup] Skipping unexpected table name: ${tablename}`);
+                continue;
+            }
             await prisma.$executeRawUnsafe(`DROP TABLE IF EXISTS "${tablename}"`);
             console.log(`[Startup] Cleaned up orphaned staging table: ${tablename}`);
         }

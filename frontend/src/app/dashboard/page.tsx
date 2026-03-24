@@ -65,7 +65,7 @@ export default function DashboardPage() {
         );
     }
 
-    const closeProgressPct = governance.currentCycle?.tasks
+    const closeProgressPct = governance.currentCycle?.tasks?.length
         ? Math.round((governance.currentCycle.tasks.filter((t: any) => t.status === "COMPLETED").length / governance.currentCycle.tasks.length) * 100)
         : 0;
 

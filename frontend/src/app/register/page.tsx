@@ -36,11 +36,13 @@ export default function RegisterPage() {
             const data = res.data;
 
             Cookies.set("token", data.accessToken, { path: "/", expires: 7 });
+            localStorage.setItem("token", data.accessToken);
             localStorage.setItem("user", JSON.stringify(data.user));
 
             if (data.tenantId) {
                 Cookies.set("tenantId", data.tenantId, { path: "/", expires: 7 });
                 localStorage.setItem("activeTenantId", data.tenantId);
+                localStorage.setItem("tenantId", data.tenantId);
             }
             router.push("/dashboard");
         } catch (err) {

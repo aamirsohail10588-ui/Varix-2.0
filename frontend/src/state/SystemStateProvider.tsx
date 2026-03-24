@@ -109,14 +109,30 @@ export function SystemStateProvider({ children }: { children: React.ReactNode })
             const getValue = (index: number, defaultValue: any) =>
                 results[index].status === 'fulfilled' ? (results[index] as PromiseFulfilledResult<any>).value : defaultValue;
 
+            const getReason = (index: number) =>
+                results[index].status === 'rejected' ? (results[index] as PromiseRejectedResult).reason : null;
+
             const healthRes = getValue(0, null);
 
             if (!healthRes) {
-                console.error("Health API unavailable");
+                const reason = getReason(0);
+                const status = reason?.response?.status;
+                console.error("Health API unavailable:", reason?.message || reason);
+
+                // Stale/invalid token — clear session and redirect to login
+                if (status === 401) {
+                    localStorage.removeItem("token");
+                    localStorage.removeItem("tenantId");
+                    localStorage.removeItem("activeTenantId");
+                    localStorage.removeItem("user");
+                    window.location.href = "/login";
+                    return;
+                }
+
                 setState(prev => ({
                     ...prev,
                     loading: false,
-                    error: "System health API unavailable"
+                    error: status ? `Health API error (${status})` : "System health API unavailable"
                 }));
                 return;
             }
@@ -127,7 +143,7 @@ export function SystemStateProvider({ children }: { children: React.ReactNode })
                 health: {
                     status: (healthData.status as "HEALTHY" | "DEGRADED" | "CRITICAL") || "DEGRADED",
                     latency: Math.round(Number(healthData.performance?.snapshot_processing_duration || 0)),
-                    uptime: "12d 4h 12m",
+                    uptime: healthData.uptime || healthData.performance?.uptime || "N/A",
                 },
                 ledger: getValue(1, null),
                 ingestion: {

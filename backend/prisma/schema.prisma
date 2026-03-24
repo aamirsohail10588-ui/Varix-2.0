@@ -8,104 +8,41 @@ datasource db {
 }
 
 model Tenant {
-  id                        String                     @id @default(uuid())
-  name                      String
-  industry                  String?                    @default("Technology")
-  company_size              String?                    @default("Mid-Market")
-  createdAt                 DateTime                   @default(now())
-  updatedAt                 DateTime                   @updatedAt
-  accounts                  Account[]
-  auditLogs                 AuditLog[]
-  branches                  Branch[]
-  closeCycles               CloseCycle[]
-  closeTasks                CloseTask[]
-  controlOverrides          ControlOverride[]
-  controlSpecs              ControlSpec[]
-  costCenters               CostCenter[]
-  customers                 Customer[]
-  dataQualityIssues         DataQualityIssue[]
-  roles                     Role[]
-  taxComponents             TaxComponent[]
-  users                     UserTenantRole[]
-  vendors                   Vendor[]
-  apiKeys                   ApiKey[]
-  budgets                   Budget[]
-  changeEvents              ChangeEvent[]
-  controlRuns               ControlRun[]
-  eliminationJournals       EliminationJournal[]
-  entities                  Entity[]
-  erpConnectors             ErpConnector[]
-  evidenceDocuments         EvidenceDocument[]
-  healthIndices             FinancialHealthIndex[]
-  forecastVersions          ForecastVersion[]
-  graphEdges                GraphEdge[]
-  graphNodes                GraphNode[]
-  gstRecords                GstRecord[]
-  gstValidations            GstValidation[]
-  ingestionBatches          IngestionBatch[]
-  intercompanyTransactions  IntercompanyTransaction[]
-  ledgerEntries             LedgerEntry[]
-  materializedLedgerMetrics MaterializedLedgerMetric[]
-  riskMetrics               RiskMetric[]
-  serviceAccounts           ServiceAccount[]
-  sessions                  Session[]
-  snapshots                 Snapshot[]
-  syncJobs                  SyncJob[]
-  varianceRecords           VarianceRecord[]
-  vendorCompliance          VendorCompliance[]
-  bankAccounts              BankAccount[]
-  bankStatements            BankStatement[]
-  reconciliationMatches     ReconciliationMatch[]
-  reconciliationSessions    ReconciliationSession[]
-  workflowRuns              WorkflowRun[]
-  jobDefinitions            JobDefinition[]
-  schemaRegistries          SchemaRegistry[]
-  accountMaps               AccountMap[]
-  conditioningLogs          ConditioningLog[]
-  lineageTrails             LineageTrail[]
-  periodLocks               PeriodLock[]
-  integritySeals            IntegritySeal[]
-  taxJurisdictions          TaxJurisdiction[]
-  approvalWorkflows         ApprovalWorkflow[]
-  approvalRequests          ApprovalRequest[]
-  anomalyAlerts             AnomalyAlert[]
-  investigations            Investigation[]
+  id           String   @id @default(uuid())
+  name         String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  company_size String?  @default("Mid-Market")
+  industry     String?  @default("Technology")
 }
 
 model User {
-  id                String             @id @default(uuid())
-  email             String             @unique
-  password          String
-  name              String?
-  mfaEnabled        Boolean            @default(false)
-  mfaSecret         String?
-  googleId          String?            @unique
-  microsoftId       String?            @unique
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
-  auditLogs         AuditLog[]
-  controlOverrides  ControlOverride[]
-  taskApprovals     TaskApproval[]
-  taskEvidence      TaskEvidence[]
-  tenants           UserTenantRole[]
-  evidenceDocuments EvidenceDocument[]
-  ingestionBatches  IngestionBatch[]
-  sessions          Session[]
-  periodLocks       PeriodLock[] @relation("PeriodLockedBy")
-  integritySeals    IntegritySeal[] @relation("SealedBy")
-  approvalRequests  ApprovalRequest[] @relation("RequestedBy")
-  approvalSteps     ApprovalStep[] @relation("Approver")
-  investigations    Investigation[] @relation("InvestigationAssignee")
+  id               String            @id @default(uuid())
+  email            String            @unique
+  password         String
+  name             String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  googleId         String?           @unique
+  mfaEnabled       Boolean           @default(false)
+  mfaSecret        String?
+  microsoftId      String?           @unique
+  auditLogs        AuditLog[]
+  controlOverrides ControlOverride[]
+  taskApprovals    TaskApproval[]
+  taskEvidence     TaskEvidence[]
+  tenants          UserTenantRole[]
+  ingestionBatches IngestionBatch[]
+  sessions         Session[]
 }
 
 model Role {
   id          String           @id @default(uuid())
   name        String
-  description String?
   tenantId    String
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
-  tenant      Tenant           @relation(fields: [tenantId], references: [id])
+  description String?
   permissions RolePermission[]
   users       UserTenantRole[]
 
@@ -136,7 +73,6 @@ model UserTenantRole {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   role      Role     @relation(fields: [roleId], references: [id])
-  tenant    Tenant   @relation(fields: [tenantId], references: [id])
   user      User     @relation(fields: [userId], references: [id])
 
   @@unique([userId, tenantId, roleId])
@@ -145,7 +81,7 @@ model UserTenantRole {
 model Session {
   id           String   @id @default(uuid())
   userId       String
-  tenantId     String?
+  tenantId     String?  @db.Uuid
   token        String   @unique
   refreshToken String?  @unique
   ipAddress    String?
@@ -153,7 +89,6 @@ model Session {
   deviceMeta   Json?
   expiresAt    DateTime
   createdAt    DateTime @default(now())
-  tenant       Tenant?  @relation(fields: [tenantId], references: [id])
   user         User     @relation(fields: [userId], references: [id])
 
   @@map("sessions")
@@ -169,75 +104,59 @@ model ApiKey {
   expiresAt DateTime?
   lastUsed  DateTime?
   createdAt DateTime  @default(now())
-  tenant    Tenant    @relation(fields: [tenantId], references: [id])
 
   @@map("api_keys")
 }
 
 model ServiceAccount {
   id         String   @id @default(uuid())
-  tenantId   String
+  tenantId   String   @db.Uuid
   name       String
   clientId   String   @unique
   secretHash String
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
-  tenant     Tenant   @relation(fields: [tenantId], references: [id])
 
   @@map("service_accounts")
 }
 
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
 model Account {
-  id        String        @id @default(uuid())
+  id        String   @id @default(uuid())
   tenantId  String
   code      String
   name      String
   type      String
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
-  tenant    Tenant        @relation(fields: [tenantId], references: [id])
-  entries   LedgerEntry[]
-  accountMaps AccountMap[]
-  budgetItems BudgetItem[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([tenantId, code])
 }
 
 model LedgerEntry {
-  id                 String   @id @default(uuid())
-  tenant_id          String
-  transaction_date   DateTime
-  posting_period     String?  @default("OPEN")
-  account_id         String
-  debit_amount       Decimal  @default(0.0) @db.Decimal(19, 4)
-  credit_amount      Decimal  @default(0.0) @db.Decimal(19, 4)
-  currency           String?  @default("USD")
-  base_currency_amount Decimal? @default(0.0) @db.Decimal(19, 4)
-  source_system      String?
-  snapshot_id        String?
-  createdAt          DateTime @default(now())
-  confidence_score   Int?     @default(100)
-  ingestion_batch_id String?
-  raw_record_id      String?
-  source_id          String?
-  provenance_hash    String?   // SHA-256 for immutability proof
-  tax_code           String?
-  tax_amount         Decimal?  @default(0.0) @db.Decimal(19, 4)
-  tax_rate_id        String?
-  account            Account  @relation(fields: [account_id], references: [id])
-  tenant             Tenant   @relation(fields: [tenant_id], references: [id])
-  snapshot           Snapshot? @relation(fields: [snapshot_id], references: [id])
-  reconciliationMatches ReconciliationMatch[]
-  approvalRequests   ApprovalRequest[]
-  evidenceDocuments  EvidenceDocument[]
-  anomalyAlerts      AnomalyAlert[]
+  id                   String    @default(uuid()) @db.Uuid
+  tenant_id            String    @db.Uuid
+  transaction_date     DateTime  @db.Timestamp(6)
+  posting_period       String?
+  account_id           String?   @db.Uuid
+  debit_amount         Decimal?  @db.Decimal(19, 4)
+  credit_amount        Decimal?  @db.Decimal(19, 4)
+  currency             String?
+  source_system        String?
+  snapshot_id          String?   @db.Uuid
+  ingestion_batch_id   String?   @db.Uuid
+  confidence_score     Int?
+  source_id            String?
+  createdAt            DateTime? @default(now()) @db.Timestamp(6)
+  provenance_hash      String?
+  base_currency_amount Decimal?  @default(0.0) @db.Decimal(19, 4)
+  tax_code             String?
+  tax_amount           Decimal?  @default(0.0) @db.Decimal(19, 4)
+  tax_rate_id          String?   @db.Uuid
 
-  @@index([tenant_id])
-  @@index([tenant_id, transaction_date])
-  @@index([tenant_id, posting_period])
-  @@index([account_id])
-  @@index([snapshot_id])
-  @@index([ingestion_batch_id])
+  @@id([id, transaction_date], map: "ledger_entries_pkey1")
+  @@index([snapshot_id], map: "idx_ledger_snapshot")
+  @@index([tenant_id], map: "idx_ledger_tenant")
   @@map("ledger_entries")
 }
 
@@ -247,7 +166,6 @@ model Vendor {
   name      String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  tenant    Tenant   @relation(fields: [tenantId], references: [id])
 }
 
 model Customer {
@@ -256,7 +174,6 @@ model Customer {
   name      String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  tenant    Tenant   @relation(fields: [tenantId], references: [id])
 }
 
 model CostCenter {
@@ -266,7 +183,6 @@ model CostCenter {
   name      String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  tenant    Tenant   @relation(fields: [tenantId], references: [id])
 
   @@unique([tenantId, code])
 }
@@ -278,7 +194,6 @@ model Branch {
   name      String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  tenant    Tenant   @relation(fields: [tenantId], references: [id])
 
   @@unique([tenantId, code])
 }
@@ -290,7 +205,6 @@ model TaxComponent {
   rate      Decimal  @db.Decimal(5, 4)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  tenant    Tenant   @relation(fields: [tenantId], references: [id])
 
   @@unique([tenantId, code])
 }
@@ -314,11 +228,10 @@ model IngestionBatch {
   file_name         String
   record_count      Int                @default(0)
   status            String             @default("pending")
-  createdBy         String?
   created_at        DateTime           @default(now())
+  createdBy         String?
   dataQualityIssues DataQualityIssue[]
   user              User?              @relation(fields: [createdBy], references: [id])
-  tenant            Tenant             @relation(fields: [tenant_id], references: [id])
   files             IngestionFile[]
   rawRecords        RawRecord[]
   snapshots         Snapshot[]
@@ -326,7 +239,6 @@ model IngestionBatch {
   @@index([tenant_id])
   @@index([status])
   @@index([created_at])
-
   @@map("ingestion_batches")
 }
 
@@ -342,42 +254,37 @@ model IngestionFile {
 
 model Snapshot {
   id                 String             @id @default(uuid())
-  tenant_id          String
+  tenant_id          String             @db.Uuid
   batch_id           String
   status             String             @default("UNPROCESSED")
   snapshot_timestamp DateTime           @default(now())
   record_count       Int                @default(0)
   payload_hash       String             @default("")
+  graph_processed    Boolean            @default(false)
+  updatedAt          DateTime           @updatedAt
+  error_message      String?
   dataQualityIssues  DataQualityIssue[]
   changeEvents       ChangeEvent[]
   controlRuns        ControlRun[]
   rawRecords         RawRecord[]
-  updatedAt          DateTime           @updatedAt
-  graph_processed    Boolean            @default(false)
   batch              IngestionBatch     @relation(fields: [batch_id], references: [id])
-  tenant             Tenant             @relation(fields: [tenant_id], references: [id])
-  error_message      String?
-
-  ledgerEntries      LedgerEntry[]
-  evidenceDocuments  EvidenceDocument[]
-  approvalRequests   ApprovalRequest[]
 
   @@map("snapshots")
 }
 
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
 model RawRecord {
   id               String         @id @default(uuid())
   batch_id         String
   payload_json     Json
   snapshotId       String?
   validationErrors Json?
-  lineage_hash     String?  // SHA-256 for source integrity
+  lineage_hash     String?
   batch            IngestionBatch @relation(fields: [batch_id], references: [id], onDelete: Cascade)
   snapshot         Snapshot?      @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
 
   @@index([batch_id])
   @@index([snapshotId])
-
   @@map("raw_records")
 }
 
@@ -393,7 +300,6 @@ model ChangeEvent {
   snapshot_to   String
   detected_at   DateTime @default(now())
   snapshotTo    Snapshot @relation(fields: [snapshot_to], references: [id])
-  tenant        Tenant   @relation(fields: [tenant_id], references: [id])
 
   @@map("change_events")
 }
@@ -412,7 +318,6 @@ model DataQualityIssue {
   updatedAt       DateTime       @updatedAt
   batch           IngestionBatch @relation(fields: [batchId], references: [id])
   snapshot        Snapshot       @relation(fields: [snapshotId], references: [id])
-  tenant          Tenant         @relation(fields: [tenantId], references: [id])
 }
 
 model ControlSpec {
@@ -426,7 +331,6 @@ model ControlSpec {
   isActive    Boolean         @default(true)
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
-  tenant      Tenant          @relation(fields: [tenantId], references: [id])
   results     ControlResult[]
 }
 
@@ -438,7 +342,6 @@ model ControlRun {
   run_timestamp DateTime        @default(now())
   results       ControlResult[]
   snapshot      Snapshot        @relation(fields: [snapshot_id], references: [id])
-  tenant        Tenant          @relation(fields: [tenantId], references: [id])
 
   @@map("control_runs")
 }
@@ -450,8 +353,8 @@ model ControlResult {
   entity_reference  String
   severity          String
   violation_message String
-  confidence_score  String?
   created_at        DateTime         @default(now())
+  confidence_score  String?
   overrides         ControlOverride?
   controlRun        ControlRun       @relation(fields: [controlRunId], references: [id])
   controlSpec       ControlSpec      @relation(fields: [control_id], references: [id])
@@ -459,7 +362,6 @@ model ControlResult {
   @@index([controlRunId])
   @@index([control_id])
   @@index([entity_reference])
-
   @@map("control_results")
 }
 
@@ -472,7 +374,6 @@ model ControlOverride {
   createdAt    DateTime      @default(now())
   approvedBy   User          @relation(fields: [approvedById], references: [id])
   result       ControlResult @relation(fields: [resultId], references: [id])
-  tenant       Tenant        @relation(fields: [tenantId], references: [id])
 }
 
 model CloseCycle {
@@ -481,11 +382,10 @@ model CloseCycle {
   name           String
   startDate      DateTime
   endDate        DateTime
-  close_deadline DateTime?
   status         String      @default("OPEN")
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
-  tenant         Tenant      @relation(fields: [tenantId], references: [id])
+  close_deadline DateTime?
   tasks          CloseTask[]
 }
 
@@ -500,7 +400,6 @@ model CloseTask {
   createdAt                 DateTime         @default(now())
   updatedAt                 DateTime         @updatedAt
   cycle                     CloseCycle       @relation(fields: [cycleId], references: [id])
-  tenant                    Tenant           @relation(fields: [tenantId], references: [id])
   approvals                 TaskApproval[]
   dependenciesAsPredecessor TaskDependency[] @relation("PredecessorTask")
   dependenciesAsSuccessor   TaskDependency[] @relation("SuccessorTask")
@@ -551,7 +450,6 @@ model AuditLog {
   hash       String?
   prevHash   String?
   createdAt  DateTime @default(now())
-  tenant     Tenant?  @relation(fields: [tenantId], references: [id])
   user       User?    @relation(fields: [userId], references: [id])
 
   @@index([tenantId])
@@ -561,14 +459,13 @@ model AuditLog {
 
 model RiskMetric {
   id            String   @id @default(uuid())
-  tenant_id     String
+  tenant_id     String   @db.Uuid
   period        String
   journal_risk  Float    @default(0.0)
   tax_risk      Float    @default(0.0)
   override_risk Float    @default(0.0)
   close_risk    Float    @default(0.0)
   calculated_at DateTime @default(now())
-  tenant        Tenant   @relation(fields: [tenant_id], references: [id])
 
   @@unique([tenant_id, period])
   @@map("risk_metrics")
@@ -579,13 +476,12 @@ model GraphNode {
   tenant_id        String
   node_type        String
   reference_id     String
-  state_value      Json?
-  last_computed_at DateTime?
-  version          Int         @default(1)
   created_at       DateTime    @default(now())
+  last_computed_at DateTime?
+  state_value      Json?
+  version          Int         @default(1)
   edges_out        GraphEdge[] @relation("sourceNode")
   edges_in         GraphEdge[] @relation("targetNode")
-  tenant           Tenant      @relation(fields: [tenant_id], references: [id])
 
   @@unique([tenant_id, node_type, reference_id])
   @@index([tenant_id])
@@ -602,14 +498,11 @@ model GraphEdge {
   created_at        DateTime  @default(now())
   sourceNode        GraphNode @relation("sourceNode", fields: [source_node_id], references: [id])
   targetNode        GraphNode @relation("targetNode", fields: [target_node_id], references: [id])
-  tenant            Tenant    @relation(fields: [tenant_id], references: [id])
 
   @@unique([source_node_id, target_node_id, relationship_type])
-
   @@index([tenant_id])
   @@index([source_node_id])
   @@index([target_node_id])
-
   @@map("graph_edges")
 }
 
@@ -624,7 +517,6 @@ model ErpConnector {
   created_at        DateTime         @default(now())
   updated_at        DateTime         @updatedAt
   tokens            ConnectorToken[]
-  tenant            Tenant           @relation(fields: [tenant_id], references: [id])
   syncJobs          SyncJob[]
 
   @@unique([tenant_id, connector_type])
@@ -645,7 +537,7 @@ model ConnectorToken {
 
 model SyncJob {
   id            String       @id @default(uuid())
-  tenant_id     String
+  tenant_id     String       @db.Uuid
   connector_id  String
   sync_type     String
   status        String       @default("PENDING")
@@ -654,7 +546,6 @@ model SyncJob {
   error_message String?
   record_count  Int          @default(0)
   connector     ErpConnector @relation(fields: [connector_id], references: [id])
-  tenant        Tenant       @relation(fields: [tenant_id], references: [id])
   logs          SyncLog[]
 
   @@map("sync_jobs")
@@ -679,7 +570,6 @@ model Entity {
   currency  String
   createdAt DateTime          @default(now())
   updatedAt DateTime          @updatedAt
-  tenant    Tenant            @relation(fields: [tenantId], references: [id])
   childOf   EntityHierarchy[] @relation("ChildEntity")
   parentOf  EntityHierarchy[] @relation("ParentEntity")
 
@@ -707,7 +597,6 @@ model IntercompanyTransaction {
   currency        String
   transactionDate DateTime
   description     String?
-  tenant          Tenant   @relation(fields: [tenantId], references: [id])
 
   @@map("intercompany_transactions")
 }
@@ -719,7 +608,6 @@ model EliminationJournal {
   description     String
   amount          Decimal  @db.Decimal(19, 4)
   createdAt       DateTime @default(now())
-  tenant          Tenant   @relation(fields: [tenantId], references: [id])
 
   @@map("elimination_journals")
 }
@@ -736,7 +624,6 @@ model GstRecord {
   cgstAmount      Decimal  @default(0) @db.Decimal(19, 4)
   sgstAmount      Decimal  @default(0) @db.Decimal(19, 4)
   isReverseCharge Boolean  @default(false)
-  tenant          Tenant   @relation(fields: [tenantId], references: [id])
 
   @@map("gst_records")
 }
@@ -749,25 +636,21 @@ model GstValidation {
   status       String
   issueDetails Json?
   createdAt    DateTime @default(now())
-  tenant       Tenant   @relation(fields: [tenantId], references: [id])
 
   @@map("gst_validations")
 }
 
 model VendorCompliance {
   id              String   @id @default(uuid())
-  tenantId        String
+  tenantId        String   @db.Uuid
   vendorName      String
   gstin           String
   filingStatus    String
   complianceScore Float    @default(0)
   lastChecked     DateTime @default(now())
-  tenant          Tenant   @relation(fields: [tenantId], references: [id])
 
   @@map("vendor_compliance")
 }
-
-
 
 model ForecastVersion {
   id        String   @id @default(uuid())
@@ -776,21 +659,19 @@ model ForecastVersion {
   name      String
   amount    Decimal  @db.Decimal(19, 4)
   createdAt DateTime @default(now())
-  tenant    Tenant   @relation(fields: [tenantId], references: [id])
 
   @@map("forecast_versions")
 }
 
 model VarianceRecord {
   id          String   @id @default(uuid())
-  tenantId    String
+  tenantId    String   @db.Uuid
   period      String
   actual      Decimal  @db.Decimal(19, 4)
   budget      Decimal  @db.Decimal(19, 4)
   variance    Decimal  @db.Decimal(19, 4)
   explanation String?
   createdAt   DateTime @default(now())
-  tenant      Tenant   @relation(fields: [tenantId], references: [id])
 
   @@map("variance_records")
 }
@@ -800,12 +681,11 @@ model FinancialHealthIndex {
   tenant_id             String
   period                String
   integrity_component   Float    @default(0.0)
-  governance_component  Float    @default(0.0)
-  stability_component   Float    @default(0.0)
-  performance_component Float    @default(0.0)
   final_score           Float    @default(0.0)
   calculated_at         DateTime @default(now())
-  tenant                Tenant   @relation(fields: [tenant_id], references: [id])
+  governance_component  Float    @default(0.0)
+  performance_component Float    @default(0.0)
+  stability_component   Float    @default(0.0)
 
   @@unique([tenant_id, period])
   @@map("financial_health_index")
@@ -813,41 +693,36 @@ model FinancialHealthIndex {
 
 model MaterializedLedgerMetric {
   id            String   @id @default(uuid())
-  tenant_id     String
+  tenant_id     String   @db.Uuid
   metric_date   DateTime
   debit_total   Decimal  @db.Decimal(19, 4)
   credit_total  Decimal  @db.Decimal(19, 4)
   record_count  Int
   calculated_at DateTime @default(now())
-  tenant        Tenant   @relation(fields: [tenant_id], references: [id])
 
   @@unique([tenant_id, metric_date])
   @@map("materialized_ledger_metrics")
 }
 
 model BankAccount {
-  id         String   @id @default(uuid())
+  id         String          @id @default(uuid())
   tenantId   String
   bankName   String
   accountNo  String
   currency   String
-  createdAt  DateTime @default(now())
-
-  tenant     Tenant   @relation(fields: [tenantId], references: [id])
+  createdAt  DateTime        @default(now())
   statements BankStatement[]
 
   @@index([tenantId])
 }
 
 model BankStatement {
-  id            String   @id @default(uuid())
+  id            String            @id @default(uuid())
   tenantId      String
   bankAccountId String
   statementDate DateTime
-  createdAt     DateTime @default(now())
-
-  tenant        Tenant      @relation(fields: [tenantId], references: [id])
-  bankAccount   BankAccount @relation(fields: [bankAccountId], references: [id])
+  createdAt     DateTime          @default(now())
+  bankAccount   BankAccount       @relation(fields: [bankAccountId], references: [id])
   transactions  BankTransaction[]
 
   @@index([tenantId])
@@ -855,55 +730,47 @@ model BankStatement {
 }
 
 model BankTransaction {
-  id              String   @id @default(uuid())
+  id              String                @id @default(uuid())
   statementId     String
   transactionDate DateTime
   description     String
-  amount          Decimal  @db.Decimal(19,4)
+  amount          Decimal               @db.Decimal(19, 4)
   currency        String
   reference       String?
-  createdAt       DateTime @default(now())
-
-  statement       BankStatement @relation(fields: [statementId], references: [id])
+  createdAt       DateTime              @default(now())
+  statement       BankStatement         @relation(fields: [statementId], references: [id])
   matches         ReconciliationMatch[]
 
   @@index([transactionDate])
 }
 
 model ReconciliationSession {
-  id            String   @id @default(uuid())
-  tenantId      String
-  status        String   @default("OPEN") // OPEN, COMMITTED, REJECTED
-  period        String?
-  source        String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId  String   @db.Uuid
+  status    String   @default("OPEN")
+  period    String?
+  source    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  tenant        Tenant   @relation(fields: [tenantId], references: [id])
-  matches       ReconciliationMatch[]
-
-  @@index([tenantId])
   @@map("reconciliation_sessions")
 }
 
 model ReconciliationMatch {
-  id                String   @id @default(uuid())
-  tenantId          String
-  sessionId         String?
+  id                String          @id(map: "ReconciliationMatch_pkey") @default(uuid())
+  tenantId          String          @db.Uuid
   bankTransactionId String
-  ledgerEntryId     String
+  ledgerEntryId     String          @db.Uuid
   matchType         String
   confidence        Float
+  createdAt         DateTime        @default(now())
+  ledgerEntryDate   DateTime?       @db.Timestamp(6)
+  sessionId         String?         @db.Uuid
   rules_meta        Json?
-  createdAt         DateTime @default(now())
+  bankTransaction   BankTransaction @relation(fields: [bankTransactionId], references: [id], map: "ReconciliationMatch_bankTransactionId_fkey")
 
-  tenant            Tenant         @relation(fields: [tenantId], references: [id])
-  session           ReconciliationSession? @relation(fields: [sessionId], references: [id])
-  bankTransaction   BankTransaction @relation(fields: [bankTransactionId], references: [id])
-  ledgerEntry       LedgerEntry     @relation(fields: [ledgerEntryId], references: [id])
-
-  @@index([tenantId])
-  @@index([sessionId])
+  @@index([tenantId], map: "ReconciliationMatch_tenantId_idx")
+  @@index([sessionId], map: "reconciliation_matches_sessionid_idx")
   @@map("reconciliation_matches")
 }
 
@@ -923,199 +790,172 @@ model NetworkMetric {
   @@map("network_metrics")
 }
 
-
-
 model WorkflowRun {
-  id           String         @id @default(uuid())
-  tenant_id    String
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id     String    @db.Uuid
   workflow_name String
-  status       String         @default("PENDING")
-  started_at   DateTime?
-  completed_at DateTime?
+  status        String    @default("PENDING")
+  started_at    DateTime? @db.Timestamptz(6)
+  completed_at  DateTime? @db.Timestamptz(6)
   error_message String?
-  metadata     Json?
-  created_at   DateTime       @default(now())
-  updated_at   DateTime       @updatedAt
-  tenant       Tenant         @relation(fields: [tenant_id], references: [id])
-  tasks        WorkflowTask[]
+  metadata      Json?
+  created_at    DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at    DateTime? @default(now()) @updatedAt @db.Timestamptz(6)
 
   @@map("workflow_runs")
 }
 
 model WorkflowTask {
-  id              String                   @id @default(uuid())
-  run_id          String
-  task_name       String
-  task_type       String
-  status          String                   @default("PENDING")
-  started_at      DateTime?
-  completed_at    DateTime?
-  retry_count     Int                      @default(0)
-  max_retries     Int                      @default(3)
-  error_message   String?
-  input_data      Json?
-  output_data     Json?
-  run             WorkflowRun              @relation(fields: [run_id], references: [id], onDelete: Cascade)
-  dependenciesAsPredecessor WorkflowTaskDependency[] @relation("TaskPredecessor")
-  dependenciesAsSuccessor   WorkflowTaskDependency[] @relation("TaskSuccessor")
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  run_id        String    @db.Uuid
+  task_name     String
+  task_type     String
+  status        String    @default("PENDING")
+  started_at    DateTime? @db.Timestamptz(6)
+  completed_at  DateTime? @db.Timestamptz(6)
+  retry_count   Int?      @default(0)
+  max_retries   Int?      @default(3)
+  error_message String?
+  input_data    Json?
+  output_data   Json?
 
   @@map("workflow_tasks")
 }
 
 model WorkflowTaskDependency {
-  id            String       @id @default(uuid())
-  predecessorId String
-  successorId   String
-  predecessor   WorkflowTask @relation("TaskPredecessor", fields: [predecessorId], references: [id])
-  successor     WorkflowTask @relation("TaskSuccessor", fields: [successorId], references: [id])
+  id            String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  predecessorId String @db.Uuid
+  successorId   String @db.Uuid
 
   @@unique([predecessorId, successorId])
   @@map("workflow_task_dependencies")
 }
 
 model JobDefinition {
-  id             String   @id @default(uuid())
-  tenant_id      String
-  name           String
-  workflow_name  String
-  cron_schedule  String
-  last_run_at    DateTime?
-  next_run_at    DateTime?
-  is_active      Boolean  @default(true)
-  config         Json?
-  created_at     DateTime @default(now())
-  updated_at     DateTime @updatedAt
-  tenant         Tenant   @relation(fields: [tenant_id], references: [id])
+  id            String    @id @default(uuid())
+  tenant_id     String
+  name          String
+  workflow_name String
+  cron_schedule String
+  last_run_at   DateTime?
+  next_run_at   DateTime?
+  is_active     Boolean   @default(true)
+  config        Json?
+  created_at    DateTime  @default(now())
+  updated_at    DateTime  @updatedAt
 
   @@map("job_definitions")
 }
 
 model SchemaRegistry {
-  id            String   @id @default(uuid())
-  tenant_id     String
-  entity_type   String   // e.g., "LedgerEntry", "Invoice"
-  schema_json   Json
-  version       Int      @default(1)
-  is_active     Boolean  @default(true)
-  created_at    DateTime @default(now())
-  updated_at    DateTime @updatedAt
-  tenant        Tenant   @relation(fields: [tenant_id], references: [id])
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id   String    @db.Uuid
+  entity_type String
+  schema_json Json
+  version     Int?      @default(1)
+  is_active   Boolean?  @default(true)
+  created_at  DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime? @default(now()) @updatedAt @db.Timestamptz(6)
 
   @@unique([tenant_id, entity_type, version])
   @@map("schema_registry")
 }
 
 model AccountMap {
-  id              String   @id @default(uuid())
-  tenant_id       String
-  source_system   String
-  source_code     String
+  id                String   @id @default(uuid())
+  tenant_id         String
+  source_system     String
+  source_code       String
   target_account_id String
-  confidence_score Int      @default(100)
-  is_manual       Boolean  @default(false)
-  created_at      DateTime @default(now())
-  updated_at      DateTime @updatedAt
-  tenant          Tenant   @relation(fields: [tenant_id], references: [id])
-  targetAccount   Account  @relation(fields: [target_account_id], references: [id])
+  confidence_score  Int      @default(100)
+  is_manual         Boolean  @default(false)
+  created_at        DateTime @default(now())
+  updated_at        DateTime @updatedAt
 
   @@unique([tenant_id, source_system, source_code])
   @@map("account_maps")
 }
 
 model ConditioningLog {
-  id              String   @id @default(uuid())
-  tenant_id       String
-  run_id          String?
-  entity_type     String
-  entity_id       String
-  original_value  Json?
-  applied_fix     String
+  id               String   @id @default(uuid())
+  tenant_id        String
+  run_id           String?
+  entity_type      String
+  entity_id        String
+  original_value   Json?
+  applied_fix      String
   confidence_delta Int
-  created_at      DateTime @default(now())
-  tenant          Tenant   @relation(fields: [tenant_id], references: [id])
+  created_at       DateTime @default(now())
 
   @@map("conditioning_logs")
 }
 
 model LineageTrail {
-  id              String   @id @default(uuid())
-  tenant_id       String
-  child_type      String   // e.g., "LedgerEntry"
-  child_id        String
-  parent_type     String   // e.g., "RawRecord"
-  parent_id       String
-  transformation  String   // Name of the rule applied
-  created_at      DateTime @default(now())
-  tenant          Tenant   @relation(fields: [tenant_id], references: [id])
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id      String    @db.Uuid
+  child_type     String
+  child_id       String    @db.Uuid
+  parent_type    String
+  parent_id      String    @db.Uuid
+  transformation String
+  created_at     DateTime? @default(now()) @db.Timestamptz(6)
 
-  @@index([parent_id])
+  @@index([parent_id], map: "idx_lineage_parent")
   @@map("lineage_trails")
 }
 
 model PeriodLock {
-  id          String   @id @default(uuid())
-  tenantId    String
-  periodName  String   // e.g., "2024-03" or "2024-Q1"
-  isLocked    Boolean  @default(false)
-  lockedAt    DateTime?
-  lockedById  String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId   String    @db.Uuid
+  periodName String
+  isLocked   Boolean   @default(false)
+  lockedAt   DateTime?
+  lockedById String?   @db.Uuid
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 
-  tenant      Tenant   @relation(fields: [tenantId], references: [id])
-  lockedBy    User?    @relation("PeriodLockedBy", fields: [lockedById], references: [id])
-
-  @@unique([tenantId, periodName])
+  @@unique([tenantId, periodName], map: "period_locks_tenant_period_unique")
   @@map("period_locks")
 }
 
 model IntegritySeal {
-  id            String   @id @default(uuid())
-  tenantId      String
-  batchId       String   @unique
-  sealHash      String   // SHA-256 Merkle Root
-  sealedAt      DateTime @default(now())
-  sealedById    String?
-  createdAt     DateTime @default(now())
+  id         String   @id @default(uuid())
+  tenantId   String
+  batchId    String   @unique
+  sealHash   String
+  sealedAt   DateTime @default(now())
+  sealedById String?
+  createdAt  DateTime @default(now())
 
-  tenant        Tenant   @relation(fields: [tenantId], references: [id])
-  sealedBy      User?    @relation("SealedBy", fields: [sealedById], references: [id])
-
-  @@index([tenantId])
   @@map("integrity_seals")
 }
 
 model TaxJurisdiction {
-  id           String    @id @default(uuid())
-  tenantId     String
-  name         String    // e.g., "India", "UK", "California"
-  countryCode  String
-  currency     String
-  isDefault    Boolean   @default(false)
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenantId    String   @db.Uuid
+  name        String
+  countryCode String
+  currency    String
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  tenant       Tenant    @relation(fields: [tenantId], references: [id])
-  taxRates     TaxRate[]
-
-  @@unique([tenantId, countryCode, name])
+  @@unique([tenantId, countryCode, name], map: "tax_jurisdictions_tenant_country_name_unique")
   @@map("tax_jurisdictions")
 }
 
 model TaxRate {
-  id              String   @id @default(uuid())
-  jurisdictionId  String
-  taxCode         String   // e.g., "GST_18", "VAT_20"
-  taxType         String   // VAT, GST, SalesTax
-  rate            Decimal  @db.Decimal(19, 4)
-  effectiveFrom   DateTime
-  effectiveTo     DateTime?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  jurisdictionId String    @db.Uuid
+  taxCode        String
+  taxType        String
+  rate           Decimal   @db.Decimal(19, 4)
+  effectiveFrom  DateTime
+  effectiveTo    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
-  jurisdiction    TaxJurisdiction @relation(fields: [jurisdictionId], references: [id])
-
-  @@unique([jurisdictionId, taxCode])
+  @@unique([jurisdictionId, taxCode], map: "tax_rates_jurisdiction_code_unique")
   @@map("tax_rates")
 }
 
@@ -1129,9 +969,6 @@ model ApprovalWorkflow {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  tenant      Tenant   @relation(fields: [tenantId], references: [id])
-  requests    ApprovalRequest[]
-
   @@map("approval_workflows")
 }
 
@@ -1139,127 +976,89 @@ model ApprovalRequest {
   id            String   @id @default(uuid())
   tenantId      String
   workflowId    String
-  entityType    String   // "LedgerEntry", "Snapshot"
+  entityType    String
   entityId      String
-  status        String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  status        String   @default("PENDING")
   requestedById String
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
-
-  tenant        Tenant           @relation(fields: [tenantId], references: [id])
-  workflow      ApprovalWorkflow @relation(fields: [workflowId], references: [id])
-  requestedBy   User             @relation("RequestedBy", fields: [requestedById], references: [id])
-  steps         ApprovalStep[]
-  
-  ledgerEntry   LedgerEntry?     @relation(fields: [entityId], references: [id], map: "ApprovalRequestLedgerEntry")
-  snapshot      Snapshot?        @relation(fields: [entityId], references: [id], map: "ApprovalRequestSnapshot")
 
   @@map("approval_requests")
 }
 
 model ApprovalStep {
-  id          String   @id @default(uuid())
-  requestId   String
-  stepOrder   Int
-  status      String   @default("PENDING")
-  approverId  String?
-  comments    String?
-  actionedAt  DateTime?
-  createdAt   DateTime @default(now())
-
-  request     ApprovalRequest @relation(fields: [requestId], references: [id])
-  approver    User?           @relation("Approver", fields: [approverId], references: [id])
+  id         String    @id @default(uuid())
+  requestId  String
+  stepOrder  Int
+  status     String    @default("PENDING")
+  approverId String?
+  comments   String?
+  actionedAt DateTime?
+  createdAt  DateTime  @default(now())
 
   @@map("approval_steps")
 }
 
 model EvidenceDocument {
   id                String   @id @default(uuid())
-  tenantId          String
-  entityType        String   // "LedgerEntry", "Snapshot"
+  digitalSignature  String?
   entityId          String
+  entityType        String
   fileName          String
   fileType          String
-  fileUrl           String   // S3/Cloud storage reference
-  digitalSignature  String?  // SHA-256 hash of file content
-  version           Int      @default(1)
-  previousVersionId String?  @unique
-  uploadedById      String?
+  fileUrl           String
+  previousVersionId String?
+  tenantId          String
   uploadedAt        DateTime @default(now())
-
-  tenant            Tenant   @relation(fields: [tenantId], references: [id])
-  uploadedBy        User?    @relation(fields: [uploadedById], references: [id])
-  ledgerEntry       LedgerEntry? @relation(fields: [entityId], references: [id], map: "EvidenceLedgerEntry")
-  snapshot          Snapshot?    @relation(fields: [entityId], references: [id], map: "EvidenceSnapshot")
-  
-  previousVersion   EvidenceDocument? @relation("EvidenceHistory", fields: [previousVersionId], references: [id])
-  nextVersion       EvidenceDocument? @relation("EvidenceHistory")
+  uploadedById      String?
+  version           Int      @default(1)
 
   @@map("evidence_documents")
 }
 
-model AnomalyAlert {
-  id              String   @id @default(uuid())
-  tenantId        String
-  ledgerEntryId   String
-  confidenceScore Float
-  reasoning       String
-  severity        String   // LOW, MEDIUM, HIGH, CRITICAL
-  status          String   @default("OPEN") // OPEN, INVESTIGATING, RESOLVED, FALSE_POSITIVE
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-
-  tenant          Tenant        @relation(fields: [tenantId], references: [id])
-  ledgerEntry     LedgerEntry   @relation(fields: [ledgerEntryId], references: [id])
-  investigations  Investigation[]
-
-  @@map("anomaly_alerts")
-}
-
-model Investigation {
-  id              String   @id @default(uuid())
-  tenantId        String
-  alertId         String
-  assignedTo      String?
-  findings        String?
-  resolution      String?
-  status          String   @default("OPEN")
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-
-  tenant          Tenant        @relation(fields: [tenantId], references: [id])
-  alert           AnomalyAlert  @relation(fields: [alertId], references: [id])
-  assignee        User?         @relation("InvestigationAssignee", fields: [assignedTo], references: [id])
-
-  @@map("investigations")
-}
-
 model Budget {
-  id          String       @id @default(uuid())
-  tenantId    String
-  name        String
-  fiscalYear  Int
-  status      String       @default("DRAFT") // DRAFT, ACTIVE, ARCHIVED
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-
-  tenant      Tenant       @relation(fields: [tenantId], references: [id])
-  items       BudgetItem[]
+  id         String   @id @default(uuid())
+  tenantId   String
+  name       String
+  status     String   @default("DRAFT")
+  createdAt  DateTime @default(now())
+  fiscalYear Int
+  updatedAt  DateTime @updatedAt
 
   @@map("budgets")
 }
 
-model BudgetItem {
-  id         String   @id @default(uuid())
-  budgetId   String
-  accountId  String
-  amount     Decimal  @db.Decimal(19, 4)
-  period     String?  // Optional: "Q1", "JAN", etc.
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model resolved_f8b4a31d30a44dc8bd283f5832fdda87 {
+  id                 String?   @db.Uuid
+  tenant_id          String?   @db.Uuid
+  transaction_date   DateTime? @db.Timestamp(6)
+  account_id         String?   @db.Uuid
+  debit_amount       Decimal?  @db.Decimal
+  credit_amount      Decimal?  @db.Decimal
+  snapshot_id        String?   @db.Uuid
+  ingestion_batch_id String?   @db.Uuid
+  createdAt          DateTime? @db.Timestamptz(6)
 
-  budget     Budget   @relation(fields: [budgetId], references: [id])
-  account    Account  @relation(fields: [accountId], references: [id])
+  @@ignore
+}
 
-  @@map("budget_items")
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model staging_73ef62cdb36541a7970601087b8635e6 {
+  transaction_id   String?
+  transaction_date String?
+  entity           String?
+  account_code     String?
+  account_name     String?
+  debit            String?
+  credit           String?
+  currency         String?
+  vendor_name      String?
+  customer_name    String?
+  document_type    String?
+  document_number  String?
+  tax_code         String?
+  cost_center      String?
+
+  @@ignore
 }
