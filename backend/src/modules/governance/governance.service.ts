@@ -147,4 +147,32 @@ export class GovernanceService {
             }
         });
     }
+
+    async createCycle(tenantId: string, name: string, startDate: Date, endDate: Date) {
+        return prisma.closeCycle.create({
+            data: { tenantId, name, startDate, endDate, status: "OPEN" },
+        });
+    }
+
+    async createCloseTask(tenantId: string, cycleId: string, name: string) {
+        return prisma.closeTask.create({
+            data: { tenantId, cycleId, name, status: "PENDING" },
+        });
+    }
+
+    async getVerifiedSnapshots(tenantId: string) {
+        return prisma.snapshot.findMany({
+            where: { tenant_id: tenantId },
+            include: { batch: true },
+            orderBy: { snapshot_timestamp: "desc" },
+        });
+    }
+
+    async approveTask(taskId: string, userId: string, status: "APPROVED" | "REJECTED", comments?: string) {
+        return prisma.taskApproval.create({
+            data: { taskId, approvedById: userId, status, comments },
+        });
+    }
 }
+
+export const governanceService = new GovernanceService();

@@ -37,7 +37,7 @@ const fetchIntegrityData = async (tenantId: string): Promise<IntegrityData> => {
             : 0,
         total_violations: totalViolations,
         evidence_coverage_ratio: latestHealth
-            ? Math.round(latestHealth.evidence_component * 100)
+            ? Math.round(latestHealth.governance_component * 100)
             : 0,
     };
 };

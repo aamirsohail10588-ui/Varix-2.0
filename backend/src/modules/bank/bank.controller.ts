@@ -5,14 +5,14 @@ import { bankService } from "./bank.service";
 export class BankController {
     async uploadStatement(req: AuthRequest, res: Response) {
         try {
-            const { bankAccountId, transactions } = req.body;
+            const { bankAccountId, statementDate, transactions } = req.body;
             const tenantId = (req as any).tenantId;
 
             if (!bankAccountId || !transactions || !Array.isArray(transactions)) {
                 return res.status(400).json({ error: "Missing bankAccountId or transactions array" });
             }
 
-            const result = await bankService.uploadStatement(tenantId, bankAccountId, transactions);
+            const result = await bankService.uploadStatement(tenantId, bankAccountId, statementDate ? new Date(statementDate) : new Date(), transactions);
             res.status(201).json(result);
         } catch (error: any) {
             console.error("Upload Statement Error:", error);
@@ -23,7 +23,7 @@ export class BankController {
     async getStatements(req: AuthRequest, res: Response) {
         try {
             const tenantId = (req as any).tenantId;
-            const statements = await bankService.listStatements(tenantId);
+            const statements = await bankService.getStatements(tenantId);
             res.json(statements);
         } catch (error: any) {
             console.error("Get Statements Error:", error);

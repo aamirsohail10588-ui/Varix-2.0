@@ -85,7 +85,7 @@ export class AnalyticsController {
 
     async getFinancialState(req: Request, res: Response): Promise<any> {
         try {
-            const nodeId = req.params.nodeId;
+            const nodeId = String(req.params.nodeId);
             const tenantId = (req as any).tenantId as string;
 
             const node = await prisma.graphNode.findUnique({

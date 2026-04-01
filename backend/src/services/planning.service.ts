@@ -16,17 +16,27 @@ export class PlanningService {
         period: string,
         totalAmount: number
     ) {
-        // Schema field is 'amount' not 'totalAmount'
-        return prisma.budget.create({
+        const fiscalYear = parseFiscalYear(period);
+
+        const budget = await prisma.budget.create({
             data: {
                 tenantId,
                 name,
-                period,
-                amount: totalAmount,
-                version: "v1",
+                fiscalYear,
                 status: "ACTIVE",
             },
         });
+
+        await prisma.forecastVersion.create({
+            data: {
+                tenantId,
+                budgetId: budget.id,
+                name: "v1",
+                amount: totalAmount,
+            },
+        });
+
+        return budget;
     }
 
     async runVarianceAnalysis(
@@ -34,17 +44,27 @@ export class PlanningService {
         period: string,
         actualAmount: number
     ) {
+        const fiscalYear = parseFiscalYear(period);
+
         const activeBudget = await prisma.budget.findFirst({
-            where: { tenantId, period, status: "ACTIVE" },
+            where: { tenantId, fiscalYear, status: "ACTIVE" },
         });
 
         if (!activeBudget) {
             throw new Error(`No active budget found for period ${period}`);
         }
 
-        // Schema field is 'amount' not 'totalAmount'
+        const latestForecast = await prisma.forecastVersion.findFirst({
+            where: { budgetId: activeBudget.id },
+            orderBy: { createdAt: "desc" },
+        });
+
+        if (!latestForecast) {
+            throw new Error(`No forecast version found for budget ${activeBudget.id}`);
+        }
+
         const actual = new Decimal(actualAmount);
-        const budget = new Decimal(activeBudget.amount.toString());
+        const budget = new Decimal(latestForecast.amount.toString());
         const variance = actual.minus(budget);
 
         return prisma.varianceRecord.create({
@@ -64,22 +84,28 @@ export class PlanningService {
         budgetId: string,
         versionName: string
     ) {
-        const budget = await prisma.budget.findUnique({
-            where: { id: budgetId },
+        const latestForecast = await prisma.forecastVersion.findFirst({
+            where: { budgetId },
+            orderBy: { createdAt: "desc" },
         });
 
-        if (!budget) throw new Error("Source budget not found.");
+        if (!latestForecast) throw new Error("No existing forecast version found for this budget.");
 
-        // Schema: ForecastVersion has no 'status' field
         return prisma.forecastVersion.create({
             data: {
                 tenantId,
                 budgetId,
                 name: versionName,
-                amount: budget.amount,
+                amount: latestForecast.amount,
             },
         });
     }
+}
+
+function parseFiscalYear(period: string): number {
+    const match = period.match(/^(\d{4})/);
+    if (!match) throw new Error(`Cannot parse fiscal year from period: "${period}"`);
+    return parseInt(match[1]);
 }
 
 export const planningService = new PlanningService();

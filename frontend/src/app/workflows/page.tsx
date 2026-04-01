@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { cn } from "@/lib/utils";
 import { useSystemState } from "@/state/SystemStateProvider";
 import SystemActionBar from "@/components/enterprise/SystemActionBar";
 import MetricTile from "@/components/enterprise/MetricTile";
@@ -14,23 +15,43 @@ export default function WorkflowsPage() {
         return (
             <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
                 <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-brand"></div>
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest italic">Orchestrating Workflows...</span>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest italic">
+                    Orchestrating Workflows...
+                </span>
             </div>
         );
     }
 
     const tasks = governance.currentCycle?.tasks || [];
     const completed = tasks.filter((t: any) => t.status === "COMPLETED").length;
-    const progress = tasks.length > 0 ? Math.round((completed / tasks.length) * 100) : 0;
-    const pendingReview = tasks.filter((t: any) => t.status === "PENDING" || t.status === "REVIEW").length;
+    const progress =
+        tasks.length > 0 ? Math.round((completed / tasks.length) * 100) : 0;
+    const pendingReview = tasks.filter(
+        (t: any) => t.status === "PENDING" || t.status === "REVIEW"
+    ).length;
+
+    const tableData = tasks.map((t: any) => ({
+        id: t.id,
+        shortId: t.id.substring(0, 8),
+        workflow: "Financial Close",
+        name: t.name || t.description || "—",
+        priority: t.priority || "Medium",
+        owner: t.assignedRoleId || "Unassigned",
+        date: t.createdAt ? new Date(t.createdAt).toLocaleDateString() : "Pending",
+        status: t.status,
+    }));
 
     return (
         <div className="space-y-6">
             <SystemActionBar
                 title="Financial Workflows"
                 actions={[
-                    { label: "Refresh Status", icon: Zap, onClick: refresh, variant: "primary" },
-                    { label: "Assign Tasks", icon: Clock, onClick: () => console.log("Assigning...") }
+                    {
+                        label: "Refresh Status",
+                        icon: Zap,
+                        onClick: refresh,
+                        variant: "primary",
+                    },
                 ]}
             />
 
@@ -55,61 +76,76 @@ export default function WorkflowsPage() {
                     icon={AlertCircle}
                 />
                 <MetricTile
-                    title="Avg. Cycle Speed"
-                    value="18.2"
-                    status="success"
-                    suffix="days"
+                    title="Completed"
+                    value={completed}
+                    status={completed === tasks.length && tasks.length > 0 ? "success" : "info"}
                     icon={Clock}
                 />
             </div>
 
-            <div className="bg-white border border-slate-100 rounded-xl overflow-hidden shadow-sm">
-                <div className="px-4 py-3 border-b border-slate-50 bg-slate-50/30">
-                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Active Operational Tasks</span>
+            {governance.currentCycle === null && (
+                <div className="p-6 bg-slate-50 rounded-xl border border-slate-100 text-center text-slate-400 text-sm">
+                    No active close cycle. Start a cycle from the Financial Close page.
                 </div>
-                <OperationalTable
-                    data={tasks.map((t: any) => ({
-                        id: t.id,
-                        workflow: "Financial Close",
-                        priority: t.priority || "Medium",
-                        owner: t.assignedRoleId || "Unassigned",
-                        date: t.createdAt ? new Date(t.createdAt).toLocaleDateString() : "Pending",
-                        status: t.status,
-                        name: t.name || t.description
-                    }))}
-                    columns={[
-                        { header: "Task ID", accessor: (item: any) => <span className="text-mono">{item.id.substring(0, 8)}</span> },
-                        { header: "Workflow Domain", accessor: "workflow" },
-                        { header: "Activity", accessor: "name", className: "font-bold text-slate-800" },
-                        {
-                            header: "Priority",
-                            accessor: (item: any) => (
-                                <span className={cn(
-                                    "px-2 py-0.5 rounded text-[8px] font-black uppercase",
-                                    item.priority === "High" ? "bg-rose-50 text-rose-600" : "bg-slate-50 text-slate-600"
-                                )}>
-                                    {item.priority}
-                                </span>
-                            )
-                        },
-                        { header: "Owner Role", accessor: "owner" },
-                        {
-                            header: "Status",
-                            accessor: (item: any) => (
-                                <span className={cn(
-                                    "px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-tighter",
-                                    item.status === "COMPLETED" ? "bg-emerald-50 text-emerald-600" : "bg-blue-50 text-blue-600"
-                                )}>
-                                    {item.status}
-                                </span>
-                            )
-                        }
-                    ]}
-                />
-            </div>
+            )}
+
+            {tasks.length > 0 && (
+                <div className="bg-white border border-slate-100 rounded-xl overflow-hidden shadow-sm">
+                    <div className="px-4 py-3 border-b border-slate-50 bg-slate-50/30">
+                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                            Active Operational Tasks
+                        </span>
+                    </div>
+                    <OperationalTable
+                        data={tableData}
+                        columns={[
+                            {
+                                header: "Task ID",
+                                accessor: (item: any) => (
+                                    <span className="font-mono text-slate-500">{item.shortId}</span>
+                                ),
+                            },
+                            { header: "Workflow Domain", accessor: "workflow" as any },
+                            {
+                                header: "Activity",
+                                accessor: "name" as any,
+                                className: "font-bold text-slate-800",
+                            },
+                            {
+                                header: "Priority",
+                                accessor: (item: any) => (
+                                    <span
+                                        className={cn(
+                                            "px-2 py-0.5 rounded text-[8px] font-black uppercase",
+                                            item.priority === "High"
+                                                ? "bg-rose-50 text-rose-600"
+                                                : "bg-slate-50 text-slate-600"
+                                        )}
+                                    >
+                                        {item.priority}
+                                    </span>
+                                ),
+                            },
+                            { header: "Owner Role", accessor: "owner" as any },
+                            {
+                                header: "Status",
+                                accessor: (item: any) => (
+                                    <span
+                                        className={cn(
+                                            "px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-tighter",
+                                            item.status === "COMPLETED"
+                                                ? "bg-emerald-50 text-emerald-600"
+                                                : "bg-blue-50 text-blue-600"
+                                        )}
+                                    >
+                                        {item.status}
+                                    </span>
+                                ),
+                            },
+                        ]}
+                    />
+                </div>
+            )}
         </div>
     );
 }
-
-// Add cn import
-import { cn } from "@/lib/utils";
